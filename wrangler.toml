@@ -1,0 +1,9 @@
+name = "society-ledger"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "public"
+
+# Bind your D1 database. Replace database_id with the id from `wrangler d1 create`.
+[[d1_databases]]
+binding = "DB"
+database_name = "society_ledger"
+database_id = "0881d8e5-917e-4ccf-acf6-b3a225f44fa2"

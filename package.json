@@ -1,0 +1,15 @@
+{
+  "name": "society-ledger",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "hash": "node hash-password.mjs",
+    "db:init": "wrangler d1 execute society_ledger --remote --file=./schema.sql",
+    "db:seed": "wrangler d1 execute society_ledger --remote --file=./seed-avir.sql",
+    "dev": "wrangler pages dev",
+    "deploy": "wrangler pages deploy"
+  },
+  "devDependencies": {
+    "wrangler": "latest"
+  }
+}

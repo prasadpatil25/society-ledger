@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Society Cash Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <div class="topbar">
+      <p class="eyebrow">Cash Book · Read-only</p>
+      <div class="spacer"></div>
+      <select id="yearSelect" class="yearsel" aria-label="Financial year"></select>
+      <a href="/admin">Admin sign in →</a>
+    </div>
+    <h1 id="socName">Society</h1>
+    <p class="period">Financial year <span class="num" id="period"></span></p>
+
+    <div class="hero">
+      <div class="passbook">
+        <p class="pb-label">Closing balance</p>
+        <div class="balance" id="closing">₹0</div>
+        <p class="as-on" id="asOn"></p>
+        <div class="flow">
+          <div class="chip in"><div class="k">Total in</div><div class="v num" id="totalIn">₹0</div></div>
+          <div class="chip out"><div class="k">Total out</div><div class="v num" id="totalOut">₹0</div></div>
+        </div>
+      </div>
+      <div class="chartcard">
+        <p class="pb-label">Balance through the period</p>
+        <p class="chart-sub">How the fund rose and fell across every entry</p>
+        <div class="chart-wrap"><svg id="chart" preserveAspectRatio="none" role="img" aria-label="Running balance"></svg></div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="no">01</span><h2>Collections &amp; spending</h2><span class="meta" id="collMeta"></span></div>
+    <div class="split">
+      <div><div class="col-label">Maintenance collected</div><div class="bars" id="incomeBars"></div></div>
+      <div><div class="col-label">Where it was spent</div><div class="bars" id="expenseBars"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="no">02</span><h2>The ledger</h2><span class="meta" id="ledgerMeta"></span></div>
+    <div class="controls">
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input id="q" type="search" placeholder="Search entries — water, Gaurkar, salary…" aria-label="Search">
+      </label>
+      <div class="seg" role="group" aria-label="Filter">
+        <button data-f="all" aria-pressed="true">All</button>
+        <button data-f="credit" aria-pressed="false">Money in</button>
+        <button data-f="debit" aria-pressed="false">Money out</button>
+      </div>
+    </div>
+    <table class="ledger">
+      <thead><tr><th>#</th><th>Date</th><th>Particulars</th><th class="r">In</th><th class="r">Out</th><th class="r">Balance</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>No entries recorded yet.</div>
+  </section>
+
+  <footer>
+    <div class="signoff">
+      <div class="sign"><div class="role">Prepared by</div><div class="who">Treasurer</div></div>
+      <div class="sign"><div class="role">Verified by</div><div class="who">Secretary</div></div>
+      <div class="sign"><div class="role">Approved by</div><div class="who">Chairman</div></div>
+    </div>
+    <div class="fine"><span id="computedNote"></span><span>Live from the society database.</span></div>
+  </footer>
+</div>
+
+<script type="module">
+import { renderLedger } from "/ledger-ui.js";
+let data = { meta:{}, entries:[], years:[] }, filter="all", query="", yearId=null;
+
+async function load(){
+  const res = await fetch("/api/ledger" + (yearId ? `?year=${yearId}` : ""));
+  if(!res.ok){ document.getElementById("rows").innerHTML = `<tr><td colspan="6" class="empty">Couldn't load the ledger.</td></tr>`; return; }
+  data = await res.json();
+  yearId = data.meta.year_id;
+  fillYears();
+  paint();
+}
+function fillYears(){
+  const sel = document.getElementById("yearSelect");
+  if(!data.years || !data.years.length){ sel.hidden = true; return; }
+  sel.hidden = false;
+  sel.innerHTML = data.years.map(y => `<option value="${y.id}" ${y.id===data.meta.year_id?"selected":""}>${y.label}</option>`).join("");
+}
+function paint(){ renderLedger(data, { editable:false, filter, query }); }
+
+document.getElementById("yearSelect").addEventListener("change", e=>{ yearId = +e.target.value; load(); });
+document.getElementById("q").addEventListener("input", e=>{ query = e.target.value; paint(); });
+document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click", ()=>{
+  filter = b.dataset.f;
+  document.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  paint();
+}));
+load();
+</script>
+</body>
+</html>

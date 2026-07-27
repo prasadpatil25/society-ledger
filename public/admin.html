@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin · Society Cash Book</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<div id="loginView" class="login-wrap" hidden>
+  <div class="login">
+    <p class="eyebrow">Society Cash Book</p>
+    <h1>Admin</h1>
+    <p class="sub">Sign in to manage transactions.</p>
+    <div class="fld"><label for="lu" class="col-label">Username</label><input id="lu" autocomplete="username" placeholder="admin"></div>
+    <div class="fld"><label for="lp" class="col-label">Password</label><input id="lp" type="password" autocomplete="current-password"></div>
+    <div class="err" id="loginErr"></div>
+    <button class="btn btn-primary" id="loginBtn">Sign in</button>
+  </div>
+</div>
+
+<div id="adminView" class="wrap" hidden>
+  <header class="mast">
+    <div class="topbar">
+      <p class="eyebrow">Cash Book · Admin</p>
+      <div class="spacer"></div>
+      <select id="yearSelect" class="yearsel" aria-label="Financial year"></select>
+      <button class="btn" id="newYearBtn">+ New year</button>
+      <button class="btn" id="shareBtn">Copy read-only link</button>
+      <a href="/" target="_blank">View public page →</a>
+      <button class="btn" id="logoutBtn">Sign out</button>
+    </div>
+
+    <div id="socNameView"><h1 id="socName">Society</h1></div>
+    <p class="period">Financial year <span class="num" id="period"></span></p>
+
+    <div class="settings show" id="settings">
+      <div class="fld"><label for="yearLabel">Financial year name</label><input type="text" id="yearLabel" placeholder="FY 2026-27"></div>
+      <div class="fld"><label for="fyStart">Period start</label><input type="date" id="fyStart"></div>
+      <div class="fld"><label for="fyEnd">Period end</label><input type="date" id="fyEnd"></div>
+      <div class="fld"><label for="due">Annual due / member (₹)</label><input type="number" id="due" step="1"></div>
+      <div class="fld"><label for="nameField">Society name</label><input type="text" id="nameField"></div>
+      <div class="fld"><label for="opening">Opening before first year (₹)</label><input type="number" id="opening" step="1"></div>
+    </div>
+    <p class="fine" style="margin-top:8px"><span id="openingNote"></span></p>
+
+    <div class="hero">
+      <div class="passbook">
+        <p class="pb-label">Closing balance</p>
+        <div class="balance" id="closing">₹0</div>
+        <p class="as-on" id="asOn"></p>
+        <div class="flow">
+          <div class="chip in"><div class="k">Total in</div><div class="v num" id="totalIn">₹0</div></div>
+          <div class="chip out"><div class="k">Total out</div><div class="v num" id="totalOut">₹0</div></div>
+        </div>
+      </div>
+      <div class="chartcard">
+        <p class="pb-label">Balance through the period</p>
+        <p class="chart-sub">How the fund rose and fell across every entry</p>
+        <div class="chart-wrap"><svg id="chart" preserveAspectRatio="none" role="img" aria-label="Running balance"></svg></div>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head"><span class="no">01</span><h2>Collections &amp; spending</h2><span class="meta" id="collMeta"></span></div>
+    <div class="split">
+      <div><div class="col-label">Maintenance collected</div><div class="bars" id="incomeBars"></div></div>
+      <div><div class="col-label">Where it was spent</div><div class="bars" id="expenseBars"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="no">02</span><h2>The ledger</h2><span class="meta" id="ledgerMeta"></span></div>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="addBtn">+ Add entry</button>
+      <button class="btn btn-danger" id="delYearBtn">Delete this year</button>
+    </div>
+
+    <div class="form" id="entryForm">
+      <h3 id="formTitle">Add entry</h3>
+      <div class="form-grid">
+        <div class="fld"><label for="fDate">Date</label><input type="date" id="fDate"></div>
+        <div class="fld"><label for="fType">Type</label><select id="fType"><option value="credit">Money in</option><option value="debit">Money out</option></select></div>
+        <div class="fld"><label for="fAmount">Amount (₹)</label><input type="number" id="fAmount" step="1" min="0"></div>
+        <div class="fld"><label for="fParticulars">Particulars</label><input type="text" id="fParticulars" placeholder="e.g. Electricity bill"></div>
+        <div class="fld" id="wrapCategory"><label for="fCategory">Category</label><input type="text" id="fCategory" placeholder="e.g. Electricity" list="catList"></div>
+        <div class="fld" id="wrapMember" style="display:none"><label for="fMember">Member</label><input type="text" id="fMember" placeholder="e.g. Gaurkar"></div>
+        <div class="fld" id="wrapMode" style="display:none"><label for="fMode">Mode</label><input type="text" id="fMode" placeholder="Cash / Bank / GPay"></div>
+      </div>
+      <datalist id="catList"><option>Electricity</option><option>Water</option><option>Sweeper</option><option>Cleaning</option><option>Repair</option></datalist>
+      <div class="form-actions">
+        <button class="btn btn-primary" id="saveEntry">Save entry</button>
+        <button class="btn" id="cancelEntry">Cancel</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input id="q" type="search" placeholder="Search entries…" aria-label="Search">
+      </label>
+      <div class="seg" role="group" aria-label="Filter">
+        <button data-f="all" aria-pressed="true">All</button>
+        <button data-f="credit" aria-pressed="false">Money in</button>
+        <button data-f="debit" aria-pressed="false">Money out</button>
+      </div>
+    </div>
+
+    <table class="ledger">
+      <thead><tr><th>#</th><th>Date</th><th>Particulars</th><th class="r">In</th><th class="r">Out</th><th class="r">Balance</th><th class="r">Edit</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>No entries in this year yet. Add your first one above.</div>
+  </section>
+
+  <footer>
+    <div class="fine"><span id="computedNote"></span><span>Changes are shared with all members instantly.</span></div>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { renderLedger, fmt } from "/ledger-ui.js";
+const $ = id => document.getElementById(id);
+const toast = m => { const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); };
+
+let data = { meta:{}, entries:[], years:[] }, filter="all", query="", editingId=null, yearId=null;
+
+async function api(path, method="GET", body){
+  const opt = { method, headers:{} };
+  if(body){ opt.headers["Content-Type"]="application/json"; opt.body=JSON.stringify(body); }
+  const res = await fetch(path, opt);
+  let out=null; try{ out=await res.json(); }catch{}
+  return { ok:res.ok, status:res.status, data:out };
+}
+
+async function boot(){
+  const s = await api("/api/session");
+  if(s.ok && s.data && s.data.authed) showAdmin(); else showLogin();
+}
+function showLogin(){ $("loginView").hidden=false; $("adminView").hidden=true; $("lu").value="admin"; $("lp").focus(); }
+function showAdmin(){ $("loginView").hidden=true; $("adminView").hidden=false; loadLedger(); }
+
+async function doLogin(){
+  $("loginErr").textContent="";
+  const r = await api("/api/login","POST",{ username:$("lu").value, password:$("lp").value });
+  if(r.ok) showAdmin(); else { $("loginErr").textContent = (r.data && r.data.error) || "Sign in failed"; $("lp").select(); }
+}
+$("loginBtn").addEventListener("click", doLogin);
+$("lp").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+$("logoutBtn").addEventListener("click", async ()=>{ await api("/api/logout","POST"); showLogin(); });
+
+$("shareBtn").addEventListener("click", async ()=>{
+  const url = location.origin + "/";
+  try{ await navigator.clipboard.writeText(url); toast("Read-only link copied"); }
+  catch{ prompt("Share this link with members:", url); }
+});
+
+// ---- ledger ----
+async function loadLedger(){
+  const r = await api("/api/ledger" + (yearId ? `?year=${yearId}` : ""));
+  if(!r.ok){ toast("Couldn't load ledger"); return; }
+  data = r.data;
+  yearId = data.meta.year_id;
+  fillYears();
+  const m = data.meta;
+  $("yearLabel").value = m.label || "";
+  $("fyStart").value = m.fy_start; $("fyEnd").value = m.fy_end;
+  $("due").value = m.due; $("nameField").value = m.name; $("opening").value = data.society_opening ?? "";
+  $("openingNote").textContent = `This year opens at ${fmt(m.opening)} — carried forward automatically from earlier years. Edit "Opening before first year" only to set the very first starting balance.`;
+  paint();
+}
+function fillYears(){
+  const sel = $("yearSelect");
+  sel.innerHTML = (data.years||[]).map(y => `<option value="${y.id}" ${y.id===data.meta.year_id?"selected":""}>${y.label}</option>`).join("");
+}
+function paint(){ renderLedger(data, { editable:true, filter, query }); }
+
+$("yearSelect").addEventListener("change", e=>{ yearId = +e.target.value; loadLedger(); });
+
+// ---- year settings (label + period) ----
+["yearLabel","fyStart","fyEnd"].forEach(id=>$(id).addEventListener("change", saveYear));
+async function saveYear(){
+  if(!yearId) return;
+  const body = { label:$("yearLabel").value||"Untitled year", fy_start:$("fyStart").value, fy_end:$("fyEnd").value };
+  const r = await api("/api/years/"+yearId,"PUT",body);
+  if(r.ok){ await loadLedger(); toast("Year updated"); } else authGuard(r) || toast((r.data&&r.data.error)||"Update failed");
+}
+
+// ---- society settings (name / due / genesis opening) ----
+["due","nameField","opening"].forEach(id=>$(id).addEventListener("change", saveSociety));
+async function saveSociety(){
+  const body = { name:$("nameField").value||"Society", due:$("due").value, opening:$("opening").value||"0" };
+  const r = await api("/api/meta","PUT",body);
+  if(r.ok){ await loadLedger(); toast("Settings saved"); } else authGuard(r);
+}
+
+// ---- new year ----
+function addDays(iso,n){ const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function addYears(iso,n){ const d=new Date(iso+"T00:00:00Z"); d.setUTCFullYear(d.getUTCFullYear()+n); return d.toISOString().slice(0,10); }
+$("newYearBtn").addEventListener("click", async ()=>{
+  const years = data.years || [];
+  let start, end;
+  if(years.length){ const last = years[years.length-1]; start = addDays(last.fy_end,1); end = addDays(addYears(start,1),-1); }
+  else { start = (data.meta.fy_start||"2025-04-01"); end = (data.meta.fy_end||"2026-03-31"); }
+  const y1 = start.slice(0,4), label = `FY ${y1}-${String(+y1+1).slice(2)}`;
+  const r = await api("/api/years","POST",{ label, fy_start:start, fy_end:end });
+  if(r.ok){ yearId = r.data.id; await loadLedger(); toast(`${label} created — add entries or adjust the dates`); }
+  else authGuard(r) || toast((r.data&&r.data.error)||"Couldn't create year");
+});
+
+$("delYearBtn").addEventListener("click", async ()=>{
+  if((data.years||[]).length<=1){ toast("You need at least one year"); return; }
+  if(!confirm("Delete this financial year window? The entries themselves are NOT deleted — they just won't appear under any year until a year covers their dates.")) return;
+  const r = await api("/api/years/"+yearId,"DELETE");
+  if(r.ok){ yearId = null; await loadLedger(); toast("Year deleted"); }
+  else authGuard(r) || toast((r.data&&r.data.error)||"Delete failed");
+});
+
+// ---- search + filter ----
+$("q").addEventListener("input", e=>{ query=e.target.value; paint(); });
+document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click", ()=>{
+  filter=b.dataset.f;
+  document.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  paint();
+}));
+
+// ---- add / edit entry ----
+function syncType(){
+  const credit = $("fType").value==="credit";
+  $("wrapMember").style.display = credit?"":"none";
+  $("wrapMode").style.display = credit?"":"none";
+  $("wrapCategory").style.display = credit?"none":"";
+}
+$("fType").addEventListener("change", syncType);
+function openForm(entry){
+  editingId = entry?entry.id:null;
+  $("formTitle").textContent = entry?"Edit entry":"Add entry";
+  $("fDate").value = entry?entry.date : (data.meta.fy_start||"");
+  $("fType").value = entry?entry.type : "debit";
+  $("fAmount").value = entry?entry.amount : "";
+  $("fParticulars").value = entry?entry.particulars : "";
+  $("fCategory").value = entry?(entry.category||"") : "";
+  $("fMember").value = entry?(entry.member||"") : "";
+  $("fMode").value = entry?(entry.mode||"") : "";
+  syncType();
+  $("entryForm").classList.add("open");
+  $("fDate").focus();
+}
+function closeForm(){ $("entryForm").classList.remove("open"); editingId=null; }
+$("addBtn").addEventListener("click", ()=>openForm(null));
+$("cancelEntry").addEventListener("click", closeForm);
+
+$("saveEntry").addEventListener("click", async ()=>{
+  const date=$("fDate").value, amount=parseFloat($("fAmount").value), type=$("fType").value;
+  const particulars=$("fParticulars").value.trim();
+  if(!date) return toast("Pick a date");
+  if(!particulars) return toast("Add a description");
+  if(!(amount>0)) return toast("Enter an amount");
+  if(data.meta.fy_start && (date < data.meta.fy_start || date > data.meta.fy_end))
+    toast("Heads up: that date is outside the selected year");
+  const body = { date, type, amount, particulars,
+    category: type==="debit" ? ($("fCategory").value.trim()||null) : "Maintenance",
+    member: type==="credit" ? ($("fMember").value.trim()||null) : null,
+    mode: type==="credit" ? ($("fMode").value.trim()||null) : null };
+  const r = editingId ? await api("/api/entries/"+editingId,"PUT",body) : await api("/api/entries","POST",body);
+  if(r.ok){ closeForm(); await loadLedger(); toast(editingId?"Entry updated":"Entry added"); }
+  else authGuard(r) || toast((r.data && r.data.error) || "Save failed");
+});
+
+$("rows").addEventListener("click", async e=>{
+  const ed = e.target.closest("[data-edit]"), dl = e.target.closest("[data-del]");
+  if(ed){ const entry = data.entries.find(x=>x.id===+ed.dataset.edit); if(entry){ openForm(entry); window.scrollTo({top:$("entryForm").offsetTop-80,behavior:"smooth"}); } }
+  if(dl){ if(confirm("Delete this entry? This cannot be undone.")){
+    const r = await api("/api/entries/"+(+dl.dataset.del),"DELETE");
+    if(r.ok){ await loadLedger(); toast("Entry deleted"); } else authGuard(r);
+  }}
+});
+
+function authGuard(r){ if(r.status===401){ toast("Session expired — sign in again"); showLogin(); return true; } return false; }
+boot();
+</script>
+</body>
+</html>
