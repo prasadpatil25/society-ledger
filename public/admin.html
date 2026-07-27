@@ -37,7 +37,7 @@
       <button class="btn" id="logoutBtn">Sign out</button>
     </div>
 
-    <div id="socNameView"><h1 id="socName">Society</h1></div>
+    <div id="socNameView"><h1 id="socName" contenteditable="true" spellcheck="false" title="Click to rename your society"></h1></div>
     <p class="period">Financial year <span class="num" id="period"></span></p>
 
     <div class="settings show" id="settings">
@@ -202,6 +202,16 @@ async function saveSociety(){
   const r = await api("/api/meta","PUT",body);
   if(r.ok){ await loadLedger(); toast("Settings saved"); } else authGuard(r);
 }
+
+// inline-edit the society name from the big heading
+const socHeading = $("socName");
+socHeading.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); socHeading.blur(); } });
+socHeading.addEventListener("blur", ()=>{
+  const name = socHeading.textContent.trim() || "Society";
+  if(name === (data.meta.name||"")){ socHeading.textContent = data.meta.name||"Society"; return; }
+  $("nameField").value = name;
+  saveSociety();
+});
 
 // ---- new year ----
 function addDays(iso,n){ const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
