@@ -118,6 +118,10 @@ export function renderLedger(data, opts = {}){
 
 function drawChart(series, rows, closing){
   const el = $("chart"); if(!el) return;
+  const cs = getComputedStyle(document.documentElement);
+  const cvar = (n,f) => (cs.getPropertyValue(n).trim() || f);
+  const cInk=cvar("--ink","#12302b"), cBrass=cvar("--brass","#a9822f"),
+        cLine=cvar("--line","#dbe2db"), cCredit=cvar("--credit","#0f6b4f"), cCard=cvar("--card","#fbfcfa");
   const W=600,H=190,padL=6,padR=6,padT=14,padB=22;
   el.setAttribute("viewBox", `0 0 ${W} ${H}`);
   if(series.length < 2){ el.innerHTML = `<text class="axis" x="${W/2}" y="${H/2}" text-anchor="middle">Add entries to see the balance curve</text>`; return; }
@@ -127,11 +131,11 @@ function drawChart(series, rows, closing){
   const line = series.map((val,i)=>`${i?'L':'M'}${x(i).toFixed(1)} ${y(val).toFixed(1)}`).join(" ");
   const area = `${line} L${x(series.length-1).toFixed(1)} ${y(min)} L${x(0)} ${y(min)} Z`;
   el.innerHTML = `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#a9822f" stop-opacity=".22"/><stop offset="1" stop-color="#a9822f" stop-opacity="0"/></linearGradient></defs>
-    <line x1="${padL}" y1="${y(min)}" x2="${W-padR}" y2="${y(min)}" stroke="#dbe2db"/>
+    <stop offset="0" stop-color="${cBrass}" stop-opacity=".22"/><stop offset="1" stop-color="${cBrass}" stop-opacity="0"/></linearGradient></defs>
+    <line x1="${padL}" y1="${y(min)}" x2="${W-padR}" y2="${y(min)}" stroke="${cLine}"/>
     <path d="${area}" fill="url(#g)"/>
-    <path d="${line}" fill="none" stroke="#12302b" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-    <circle cx="${x(series.length-1)}" cy="${y(closing)}" r="4" fill="#0f6b4f"/>
+    <path d="${line}" fill="none" stroke="${cInk}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <circle cx="${x(series.length-1)}" cy="${y(closing)}" r="4" fill="${cCredit}" stroke="${cCard}" stroke-width="1"/>
     <text class="axis" x="${padL}" y="${H-6}">${rows.length?fmtDate(rows[0].date):''}</text>
     <text class="axis" x="${W-padR}" y="${H-6}" text-anchor="end">${rows.length?fmtDate(rows[rows.length-1].date):''}</text>
     <text class="axis" x="${W-padR}" y="${y(max)-4}" text-anchor="end">peak ${fmt(max)}</text>`;
