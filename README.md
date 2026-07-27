@@ -1,5 +1,6 @@
 # Society Cash Book — shared ledger on Cloudflare
 
+
 A transparent society ledger with:
 
 - **Public read-only page** (`/`) — the shareable link for all members. No login, just the numbers.
