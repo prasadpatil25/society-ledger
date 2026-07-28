@@ -48,6 +48,9 @@ export function renderLedger(data, opts = {}){
 
   if($("socName")) $("socName").textContent = meta.name || "Society";
   if($("period")) $("period").textContent = `${fmtDate(meta.fy_start)} – ${fmtDate(meta.fy_end)}`;
+  const ph = $("printHead");
+  if(ph) ph.innerHTML = `<div class="print-title">${esc(meta.name||"Society")} — Cash Book</div>`
+    + `<div class="print-sub">${esc(meta.label||"")}${meta.label?" · ":""}${fmtDate(meta.fy_start)} – ${fmtDate(meta.fy_end)} · Generated ${new Date().toLocaleDateString("en-IN")}</div>`;
   $("closing").textContent = fmt(v.closing);
   $("totalIn").textContent = fmt(v.totalIn);
   $("totalOut").textContent = fmt(v.totalOut);
@@ -85,7 +88,7 @@ export function renderLedger(data, opts = {}){
     const cr = r.type==="credit"?r.amount:0, db = r.type==="debit"?r.amount:0;
     const tag = r.category ? esc(r.category) : (r.mode?esc(r.mode):"");
     const tagHtml = tag ? `<div class="tag">${tag}${r.member?` · ${esc(r.member)}`:""}</div>` : (r.member?`<div class="tag">${esc(r.member)}</div>`:"");
-    const act = editable ? `<td class="r"><span class="rowact">
+    const act = editable ? `<td class="r col-edit"><span class="rowact">
         <button class="btn btn-sm" data-edit="${r.id}">Edit</button>
         <button class="btn btn-sm btn-danger" data-del="${r.id}">Delete</button></span></td>` : "";
     return `<tr>
@@ -103,7 +106,7 @@ export function renderLedger(data, opts = {}){
     const label = filter==="credit" ? `Total money in · ${shown.length}`
                 : filter==="debit"  ? `Total money out · ${shown.length}`
                 : `Total · ${shown.length} entries`;
-    const actCell = editable ? "<td></td>" : "";
+    const actCell = editable ? '<td class="col-edit"></td>' : "";
     rowsHtml += `<tr class="total-row">
       <td></td><td></td>
       <td>${label}</td>
@@ -139,4 +142,27 @@ function drawChart(series, rows, closing){
     <text class="axis" x="${padL}" y="${H-6}">${rows.length?fmtDate(rows[0].date):''}</text>
     <text class="axis" x="${W-padR}" y="${H-6}" text-anchor="end">${rows.length?fmtDate(rows[rows.length-1].date):''}</text>
     <text class="axis" x="${W-padR}" y="${y(max)-4}" text-anchor="end">peak ${fmt(max)}</text>`;
+}
+
+// Build a CSV of the currently loaded year for spreadsheets / backup.
+export function buildCSV(data){
+  const v = computeView(data.meta, data.entries);
+  const cell = x => {
+    if(x===null||x===undefined) return "";
+    if(typeof x==="number") return String(x);
+    const t=String(x);
+    return /[",\r\n]/.test(t) ? `"${t.replace(/"/g,'""')}"` : t;
+  };
+  const L=[];
+  L.push(cell(`${data.meta.name||"Society"} — Cash Book`));
+  L.push(cell(`${data.meta.label||""}  ${data.meta.fy_start} to ${data.meta.fy_end}`));
+  L.push("");
+  L.push(["#","Date","Particulars","Category","Member","Mode","In","Out","Balance"].map(cell).join(","));
+  v.rows.forEach((r,i)=>{
+    L.push([ i+1, r.date, r.particulars, r.category||"", r.member||"", r.mode||"",
+      r.type==="credit"?r.amount:"", r.type==="debit"?r.amount:"", r.bal ].map(cell).join(","));
+  });
+  L.push("");
+  L.push(["","","Total","","","", v.totalIn, v.totalOut, v.closing].map(cell).join(","));
+  return L.join("\r\n");
 }

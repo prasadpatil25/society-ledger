@@ -149,3 +149,26 @@ footer{padding:40px 0 60px;border-top:1px solid var(--line);color:var(--ink-soft
 }
 :focus-visible{outline:2.5px solid var(--brass);outline-offset:2px;border-radius:4px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- print-only statement header ---- */
+.print-only{display:none}
+.print-title{font-family:"Spectral",serif;font-size:22px;font-weight:700}
+.print-sub{font-size:12px;color:#444;margin-top:2px}
+
+/* ---- print / save-as-PDF layout ---- */
+@media print{
+  :root, :root[data-theme="dark"]{
+    --paper:#fff;--card:#fff;--ink:#111;--ink-soft:#333;--ink-faint:#555;--line:#c9c9c9;
+    --brass:#7a5f1e;--brass-soft:#b89442;--credit:#0a5c43;--credit-bg:#fff;
+    --debit:#8f3320;--debit-bg:#fff;--shadow:none;color-scheme:light;
+  }
+  body{background:#fff}
+  .topbar,.settings,.toolbar,.form,.controls,.fine,#themeBtn,.rowact,.col-edit,.sec-head .meta,.openingNote,#openingNote{display:none!important}
+  .print-only{display:block;margin:0 0 14px}
+  .mast{padding-top:6px;border-bottom:1px solid #ccc}
+  .passbook,.chartcard,.sign,.chip{box-shadow:none;border:1px solid #ccc}
+  section,.hero{break-inside:avoid}
+  .ledger tr{break-inside:avoid}
+  a[href]::after{content:""}
+  @page{margin:16mm}
+}

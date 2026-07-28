@@ -22,6 +22,7 @@
 </head>
 <body>
 <div class="wrap">
+  <div class="print-only" id="printHead"></div>
   <header class="mast">
     <div class="topbar">
       <p class="eyebrow">Cash Book · Read-only</p>
@@ -71,6 +72,9 @@
         <button data-f="credit" aria-pressed="false">Money in</button>
         <button data-f="debit" aria-pressed="false">Money out</button>
       </div>
+      <div class="spacer"></div>
+      <button class="btn" id="csvBtn">Export CSV</button>
+      <button class="btn" id="printBtn">Print / PDF</button>
     </div>
     <table class="ledger">
       <thead><tr><th>#</th><th>Date</th><th>Particulars</th><th class="r">In</th><th class="r">Out</th><th class="r">Balance</th></tr></thead>
@@ -90,7 +94,7 @@
 </div>
 
 <script type="module">
-import { renderLedger } from "/ledger-ui.js";
+import { renderLedger, buildCSV } from "/ledger-ui.js";
 let data = { meta:{}, entries:[], years:[] }, filter="all", query="", yearId=null;
 
 async function load(){
@@ -131,6 +135,13 @@ themeBtn.addEventListener("click", ()=>{
   paint(); // redraw the chart with the new palette
 });
 syncThemeBtn();
+
+function download(text, name, type){ const b=new Blob([text],{type}); const u=URL.createObjectURL(b); const a=document.createElement("a"); a.href=u; a.download=name; a.click(); URL.revokeObjectURL(u); }
+function slug(x){ return String(x||"society").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+document.getElementById("csvBtn").addEventListener("click", ()=>{
+  download("\ufeff"+buildCSV(data), `${slug(data.meta.name)}-${slug(data.meta.label||"ledger")}.csv`, "text/csv;charset=utf-8");
+});
+document.getElementById("printBtn").addEventListener("click", ()=> window.print());
 
 load();
 </script>
