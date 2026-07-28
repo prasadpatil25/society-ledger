@@ -16,6 +16,14 @@ CREATE TABLE IF NOT EXISTS entries (
 );
 CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date);
 
+-- Per-IP login throttling (populated by the login endpoint).
+CREATE TABLE IF NOT EXISTS login_attempts (
+  ip           TEXT PRIMARY KEY,
+  fails        INTEGER NOT NULL DEFAULT 0,
+  window_start INTEGER NOT NULL DEFAULT 0,
+  locked_until INTEGER NOT NULL DEFAULT 0
+);
+
 -- Financial years (named period windows). Entries belong to a year by date,
 -- so no foreign key is needed; a year is just a start/end window with a label.
 CREATE TABLE IF NOT EXISTS years (

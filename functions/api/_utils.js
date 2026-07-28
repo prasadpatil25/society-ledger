@@ -135,3 +135,9 @@ export function normalizeEntry(b) {
     mode: b.type === "credit" ? (b.mode ? String(b.mode).trim().slice(0, 40) : null) : null,
   };
 }
+
+export function clientIp(request) {
+  return request.headers.get("CF-Connecting-IP")
+    || request.headers.get("X-Forwarded-For")
+    || "unknown";
+}
