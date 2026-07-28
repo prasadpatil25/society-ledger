@@ -16,6 +16,28 @@ CREATE TABLE IF NOT EXISTS entries (
 );
 CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date);
 
+-- Reusable quick-add templates for recurring entries.
+CREATE TABLE IF NOT EXISTS templates (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  label       TEXT NOT NULL,
+  particulars TEXT NOT NULL,
+  type        TEXT NOT NULL CHECK (type IN ('credit','debit')),
+  amount      REAL,
+  category    TEXT,
+  member      TEXT,
+  mode        TEXT,
+  sort        INTEGER NOT NULL DEFAULT 0
+);
+
+-- Seed common recurring templates only if none exist yet.
+INSERT INTO templates (label, particulars, type, amount, category, sort)
+SELECT * FROM (
+  SELECT 'Sweeper salary'     AS label, 'Sweeper salary'     AS particulars, 'debit' AS type, 1500 AS amount, 'Sweeper'     AS category, 1 AS sort
+  UNION ALL SELECT 'Electricity bill',  'Electricity bill',  'debit', NULL, 'Electricity', 2
+  UNION ALL SELECT 'Water bill',        'Water bill',        'debit', NULL, 'Water',       3
+  UNION ALL SELECT 'Cleaning materials','Cleaning materials','debit', NULL, 'Cleaning',    4
+) WHERE NOT EXISTS (SELECT 1 FROM templates);
+
 -- Per-IP login throttling (populated by the login endpoint).
 CREATE TABLE IF NOT EXISTS login_attempts (
   ip           TEXT PRIMARY KEY,

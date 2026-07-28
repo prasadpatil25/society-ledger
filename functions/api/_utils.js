@@ -149,3 +149,28 @@ export async function listMembers(env, includeContact = false) {
     .all();
   return results || [];
 }
+
+export async function listTemplates(env) {
+  const { results } = await env.DB
+    .prepare("SELECT id, label, particulars, type, amount, category, member, mode, sort FROM templates ORDER BY sort, id")
+    .all();
+  return results || [];
+}
+
+export function parseTemplate(b) {
+  const label = String(b.label || "").trim();
+  const particulars = String(b.particulars || "").trim();
+  if (!label || !particulars) return { error: "Label and particulars are required" };
+  if (b.type !== "credit" && b.type !== "debit") return { error: "Invalid type" };
+  const amount = (b.amount === "" || b.amount == null) ? null : Number(b.amount);
+  if (amount != null && !(amount > 0)) return { error: "Amount must be positive" };
+  return {
+    label: label.slice(0, 40),
+    particulars: particulars.slice(0, 200),
+    type: b.type,
+    amount,
+    category: b.category ? String(b.category).trim().slice(0, 60) : null,
+    member: b.member ? String(b.member).trim().slice(0, 80) : null,
+    mode: b.mode ? String(b.mode).trim().slice(0, 40) : null,
+  };
+}

@@ -134,6 +134,10 @@ SESSION_SECRET=any-long-random-string
 | POST   | `/api/members`      | yes  | add a member                   |
 | PUT    | `/api/members/:id`  | yes  | edit a member (renames cascade)|
 | DELETE | `/api/members/:id`  | yes  | remove a member from roster    |
+| GET    | `/api/templates`    | yes  | list quick-add templates       |
+| POST   | `/api/templates`    | yes  | create a template              |
+| PUT    | `/api/templates/:id`| yes  | edit a template                |
+| DELETE | `/api/templates/:id`| yes  | delete a template              |
 
 ---
 
@@ -154,7 +158,7 @@ adjust its dates), and each year's opening balance is computed automatically as 
 year's closing — no manual carry-over entry. "Opening before first year" (a society setting)
 is only the genesis balance before your very first year.
 
-> **Upgrading an existing database:** re-run the schema once to add the `years` / `members` / `login_attempts` tables —
+> **Upgrading an existing database:** re-run the schema once to add the `years` / `members` / `login_attempts` / `templates` tables —
 > `wrangler d1 execute society_ledger --remote --file=./schema.sql` (locally use `--local`).
 > It's safe to re-run: tables use `IF NOT EXISTS` and the first year is only seeded if none exist.
 
@@ -166,6 +170,14 @@ consistent. The Collections view is driven by the roster: it lists **every** act
 including those who have paid nothing — sorted with defaulters first, and shows the total
 outstanding for the year. Renaming a member updates their past entries automatically;
 removing a member keeps their historical entries intact.
+
+## Quick-add templates
+
+The **Quick-add templates** section (admin) defines reusable entries for recurring costs
+(sweeper salary, electricity, water…). Each becomes a one-tap button above the ledger: click
+it and the Add-entry form opens pre-filled with the type, particulars, category, and default
+amount, dated today — you just confirm the amount and save. Templates seed with a few common
+ones on first setup.
 
 ## Notes / limits
 

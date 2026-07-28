@@ -97,6 +97,8 @@
       <button class="btn btn-danger" id="delYearBtn">Delete this year</button>
     </div>
 
+    <div class="quickadd" id="quickAdd"></div>
+
     <div class="form" id="entryForm">
       <h3 id="formTitle">Add entry</h3>
       <div class="form-grid">
@@ -156,6 +158,30 @@
     <div class="empty" id="memberEmpty" hidden>No members yet. Add your first one above.</div>
   </section>
 
+  <section id="templatesSection">
+    <div class="sec-head"><span class="no">04</span><h2>Quick-add templates</h2><span class="meta" id="tplMeta"></span></div>
+    <div class="toolbar"><button class="btn btn-primary" id="addTplBtn">+ New template</button></div>
+
+    <div class="form" id="tplForm">
+      <h3 id="tplFormTitle">New template</h3>
+      <div class="form-grid">
+        <div class="fld"><label for="tLabel">Button label</label><input type="text" id="tLabel" placeholder="e.g. Sweeper salary"></div>
+        <div class="fld"><label for="tType">Type</label><select id="tType"><option value="debit">Money out</option><option value="credit">Money in</option></select></div>
+        <div class="fld"><label for="tAmount">Default amount (₹, optional)</label><input type="number" id="tAmount" step="1" min="0"></div>
+        <div class="fld"><label for="tParticulars">Particulars</label><input type="text" id="tParticulars" placeholder="e.g. Sweeper salary"></div>
+        <div class="fld"><label for="tCategory">Category</label><input type="text" id="tCategory" list="catList" placeholder="e.g. Sweeper"></div>
+        <div class="fld"><label for="tMode">Mode (money in)</label><input type="text" id="tMode" placeholder="Cash / Bank / GPay"></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" id="saveTpl">Save template</button><button class="btn" id="cancelTpl">Cancel</button></div>
+    </div>
+
+    <table class="ledger">
+      <thead><tr><th>Label</th><th>Particulars</th><th>Type</th><th class="r">Default ₹</th><th class="r">Edit</th></tr></thead>
+      <tbody id="tplRows"></tbody>
+    </table>
+    <div class="empty" id="tplEmpty" hidden>No templates yet. Add one to enable one-tap logging.</div>
+  </section>
+
   <footer>
     <div class="fine"><span id="computedNote"></span><span>Changes are shared with all members instantly.</span></div>
   </footer>
@@ -183,7 +209,7 @@ async function boot(){
   if(s.ok && s.data && s.data.authed) showAdmin(); else showLogin();
 }
 function showLogin(){ $("loginView").hidden=false; $("adminView").hidden=true; $("lu").value="admin"; $("lp").focus(); }
-function showAdmin(){ $("loginView").hidden=true; $("adminView").hidden=false; loadLedger(); loadRoster(); }
+function showAdmin(){ $("loginView").hidden=true; $("adminView").hidden=false; loadLedger(); loadRoster(); loadTemplates(); }
 
 async function doLogin(){
   $("loginErr").textContent="";
@@ -415,6 +441,96 @@ $("memberRows").addEventListener("click", async e=>{
   if(dl){ if(confirm("Remove this member from the roster? Their past entries are kept.")){
     const r = await api("/api/members/"+(+dl.dataset.mdel),"DELETE");
     if(r.ok){ await loadRoster(); await loadLedger(); toast("Member removed"); } else authGuard(r);
+  }}
+});
+
+// ---- recurring-entry templates ----
+let templates = [], editingTplId = null;
+
+function renderQuickAdd(){
+  const wrap = $("quickAdd");
+  wrap.innerHTML = templates.length
+    ? `<span class="qa-label">Quick add</span>` + templates.map(t => `<button class="btn btn-sm" data-tpl="${t.id}">${esc(t.label)}</button>`).join("")
+    : "";
+}
+$("quickAdd").addEventListener("click", e=>{
+  const b = e.target.closest("[data-tpl]");
+  if(!b) return;
+  const t = templates.find(x=>x.id===+b.dataset.tpl);
+  if(t) applyTemplate(t);
+});
+
+function applyTemplate(t){
+  editingId = null;
+  $("formTitle").textContent = "Add entry";
+  const today = new Date().toISOString().slice(0,10);
+  $("fDate").value = (data.meta.fy_start && today>=data.meta.fy_start && today<=data.meta.fy_end) ? today : data.meta.fy_end;
+  $("fType").value = t.type;
+  $("fAmount").value = (t.amount!=null && t.amount!=="") ? t.amount : "";
+  $("fParticulars").value = t.particulars || "";
+  $("fCategory").value = t.category || "";
+  populateMemberSelect(t.member || "");
+  $("fMode").value = t.mode || "";
+  syncType();
+  $("entryForm").classList.add("open");
+  window.scrollTo({top:$("entryForm").offsetTop-80,behavior:"smooth"});
+  $("fAmount").focus();
+}
+
+async function loadTemplates(){
+  const r = await api("/api/templates");
+  if(!r.ok){ if(!authGuard(r)) toast("Couldn't load templates"); return; }
+  templates = r.data.templates || [];
+  $("tplMeta").textContent = `${templates.length} template${templates.length===1?"":"s"}`;
+  $("tplEmpty").hidden = templates.length > 0;
+  $("tplRows").innerHTML = templates.map(t => `<tr>
+    <td>${esc(t.label)}</td>
+    <td>${esc(t.particulars)}${t.category?`<div class="tag">${esc(t.category)}</div>`:""}</td>
+    <td class="${t.type==='credit'?'cr':'db'}">${t.type==='credit'?'In':'Out'}</td>
+    <td class="r num">${(t.amount!=null&&t.amount!=="")?fmt(t.amount):"—"}</td>
+    <td class="r"><span class="rowact">
+      <button class="btn btn-sm" data-tedit="${t.id}">Edit</button>
+      <button class="btn btn-sm btn-danger" data-tdel="${t.id}">Delete</button></span></td></tr>`).join("");
+  renderQuickAdd();
+}
+
+function openTplForm(t){
+  editingTplId = t ? t.id : null;
+  $("tplFormTitle").textContent = t ? "Edit template" : "New template";
+  $("tLabel").value = t ? t.label : "";
+  $("tType").value = t ? t.type : "debit";
+  $("tAmount").value = t && t.amount!=null ? t.amount : "";
+  $("tParticulars").value = t ? t.particulars : "";
+  $("tCategory").value = t ? (t.category||"") : "";
+  $("tMode").value = t ? (t.mode||"") : "";
+  $("tplForm").classList.add("open");
+  $("tLabel").focus();
+}
+function closeTplForm(){ $("tplForm").classList.remove("open"); editingTplId = null; }
+$("addTplBtn").addEventListener("click", ()=>openTplForm(null));
+$("cancelTpl").addEventListener("click", closeTplForm);
+
+$("saveTpl").addEventListener("click", async ()=>{
+  const label = $("tLabel").value.trim(), particulars = $("tParticulars").value.trim();
+  if(!label) return toast("Add a button label");
+  if(!particulars) return toast("Add particulars");
+  const body = {
+    label, particulars, type: $("tType").value,
+    amount: $("tAmount").value.trim()==="" ? null : Number($("tAmount").value),
+    category: $("tCategory").value.trim()||null,
+    mode: $("tMode").value.trim()||null
+  };
+  const r = editingTplId ? await api("/api/templates/"+editingTplId,"PUT",body) : await api("/api/templates","POST",body);
+  if(r.ok){ closeTplForm(); await loadTemplates(); toast(editingTplId?"Template updated":"Template added"); }
+  else authGuard(r) || toast((r.data&&r.data.error)||"Save failed");
+});
+
+$("tplRows").addEventListener("click", async e=>{
+  const ed = e.target.closest("[data-tedit]"), dl = e.target.closest("[data-tdel]");
+  if(ed){ const t = templates.find(x=>x.id===+ed.dataset.tedit); if(t){ openTplForm(t); window.scrollTo({top:$("tplForm").offsetTop-80,behavior:"smooth"}); } }
+  if(dl){ if(confirm("Delete this template?")){
+    const r = await api("/api/templates/"+(+dl.dataset.tdel),"DELETE");
+    if(r.ok){ await loadTemplates(); toast("Template deleted"); } else authGuard(r);
   }}
 });
 

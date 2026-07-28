@@ -100,6 +100,8 @@ h2{font-family:"Spectral",serif;font-weight:600;font-size:25px;margin:0;letter-s
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px}
+.quickadd{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 16px}
+.quickadd .qa-label{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-right:2px}
 
 .form{display:none;background:var(--card);border:1px solid var(--brass-soft);border-radius:14px;padding:18px;margin:0 0 18px}
 .form.open{display:block}
