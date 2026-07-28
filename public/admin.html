@@ -105,7 +105,7 @@
         <div class="fld"><label for="fAmount">Amount (₹)</label><input type="number" id="fAmount" step="1" min="0"></div>
         <div class="fld"><label for="fParticulars">Particulars</label><input type="text" id="fParticulars" placeholder="e.g. Electricity bill"></div>
         <div class="fld" id="wrapCategory"><label for="fCategory">Category</label><input type="text" id="fCategory" placeholder="e.g. Electricity" list="catList"></div>
-        <div class="fld" id="wrapMember" style="display:none"><label for="fMember">Member</label><input type="text" id="fMember" placeholder="e.g. Gaurkar"></div>
+        <div class="fld" id="wrapMember" style="display:none"><label for="fMember">Member</label><select id="fMember"></select></div>
         <div class="fld" id="wrapMode" style="display:none"><label for="fMode">Mode</label><input type="text" id="fMode" placeholder="Cash / Bank / GPay"></div>
       </div>
       <datalist id="catList"><option>Electricity</option><option>Water</option><option>Sweeper</option><option>Cleaning</option><option>Repair</option></datalist>
@@ -134,6 +134,28 @@
     <div class="empty" id="empty" hidden>No entries in this year yet. Add your first one above.</div>
   </section>
 
+  <section id="rosterSection">
+    <div class="sec-head"><span class="no">03</span><h2>Members</h2><span class="meta" id="rosterMeta"></span></div>
+    <div class="toolbar"><button class="btn btn-primary" id="addMemberBtn">+ Add member</button></div>
+
+    <div class="form" id="memberForm">
+      <h3 id="memberFormTitle">Add member</h3>
+      <div class="form-grid">
+        <div class="fld"><label for="mFlat">Flat / unit</label><input type="text" id="mFlat" placeholder="e.g. A-101"></div>
+        <div class="fld"><label for="mName">Name</label><input type="text" id="mName" placeholder="Full name"></div>
+        <div class="fld"><label for="mContact">Contact (optional)</label><input type="text" id="mContact" placeholder="Phone or email"></div>
+        <div class="fld"><label for="mActive">Status</label><select id="mActive"><option value="1">Active</option><option value="0">Inactive</option></select></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" id="saveMember">Save member</button><button class="btn" id="cancelMember">Cancel</button></div>
+    </div>
+
+    <table class="ledger">
+      <thead><tr><th>Flat</th><th>Name</th><th>Contact</th><th>Status</th><th class="r">Edit</th></tr></thead>
+      <tbody id="memberRows"></tbody>
+    </table>
+    <div class="empty" id="memberEmpty" hidden>No members yet. Add your first one above.</div>
+  </section>
+
   <footer>
     <div class="fine"><span id="computedNote"></span><span>Changes are shared with all members instantly.</span></div>
   </footer>
@@ -142,7 +164,7 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { renderLedger, fmt, buildCSV } from "/ledger-ui.js";
+import { renderLedger, fmt, buildCSV, esc } from "/ledger-ui.js";
 const $ = id => document.getElementById(id);
 const toast = m => { const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); };
 
@@ -161,7 +183,7 @@ async function boot(){
   if(s.ok && s.data && s.data.authed) showAdmin(); else showLogin();
 }
 function showLogin(){ $("loginView").hidden=false; $("adminView").hidden=true; $("lu").value="admin"; $("lp").focus(); }
-function showAdmin(){ $("loginView").hidden=true; $("adminView").hidden=false; loadLedger(); }
+function showAdmin(){ $("loginView").hidden=true; $("adminView").hidden=false; loadLedger(); loadRoster(); }
 
 async function doLogin(){
   $("loginErr").textContent="";
@@ -273,7 +295,7 @@ function openForm(entry){
   $("fAmount").value = entry?entry.amount : "";
   $("fParticulars").value = entry?entry.particulars : "";
   $("fCategory").value = entry?(entry.category||"") : "";
-  $("fMember").value = entry?(entry.member||"") : "";
+  populateMemberSelect(entry ? (entry.member||"") : "");
   $("fMode").value = entry?(entry.mode||"") : "";
   syncType();
   $("entryForm").classList.add("open");
@@ -332,6 +354,69 @@ document.getElementById("csvBtn").addEventListener("click", ()=>{
   download("\ufeff"+buildCSV(data), `${slug(data.meta.name)}-${slug(data.meta.label||"ledger")}.csv`, "text/csv;charset=utf-8");
 });
 document.getElementById("printBtn").addEventListener("click", ()=> window.print());
+
+// ---- member roster ----
+let roster = [], editingMemberId = null;
+
+function populateMemberSelect(current){
+  const sel = $("fMember");
+  const active = (data.members || []).filter(m => m.active !== 0);
+  const names = new Set(active.map(m => m.name));
+  let opts = `<option value="">— select member —</option>`;
+  opts += active.map(m => `<option value="${esc(m.name)}">${m.flat?esc(m.flat)+" · ":""}${esc(m.name)}</option>`).join("");
+  if(current && !names.has(current)) opts += `<option value="${esc(current)}">${esc(current)} (not in roster)</option>`;
+  sel.innerHTML = opts;
+  sel.value = current || "";
+}
+
+async function loadRoster(){
+  const r = await api("/api/members");
+  if(!r.ok){ if(!authGuard(r)) toast("Couldn't load members"); return; }
+  roster = r.data.members || [];
+  const active = roster.filter(m => m.active !== 0).length;
+  $("rosterMeta").textContent = `${roster.length} member${roster.length===1?"":"s"}${roster.length?` · ${active} active`:""}`;
+  $("memberEmpty").hidden = roster.length > 0;
+  $("memberRows").innerHTML = roster.map(m => `<tr>
+    <td class="folio">${m.flat?esc(m.flat):"—"}</td>
+    <td>${esc(m.name)}</td>
+    <td class="date">${m.contact?esc(m.contact):"—"}</td>
+    <td>${m.active!==0?'<span class="status" style="color:var(--credit);font-weight:600">Active</span>':'<span class="status" style="color:var(--ink-faint)">Inactive</span>'}</td>
+    <td class="r"><span class="rowact">
+      <button class="btn btn-sm" data-medit="${m.id}">Edit</button>
+      <button class="btn btn-sm btn-danger" data-mdel="${m.id}">Delete</button></span></td></tr>`).join("");
+}
+
+function openMemberForm(m){
+  editingMemberId = m ? m.id : null;
+  $("memberFormTitle").textContent = m ? "Edit member" : "Add member";
+  $("mFlat").value = m ? (m.flat||"") : "";
+  $("mName").value = m ? m.name : "";
+  $("mContact").value = m ? (m.contact||"") : "";
+  $("mActive").value = m ? String(m.active!==0?1:0) : "1";
+  $("memberForm").classList.add("open");
+  $("mName").focus();
+}
+function closeMemberForm(){ $("memberForm").classList.remove("open"); editingMemberId = null; }
+$("addMemberBtn").addEventListener("click", ()=>openMemberForm(null));
+$("cancelMember").addEventListener("click", closeMemberForm);
+
+$("saveMember").addEventListener("click", async ()=>{
+  const name = $("mName").value.trim();
+  if(!name) return toast("Name is required");
+  const body = { flat:$("mFlat").value.trim()||null, name, contact:$("mContact").value.trim()||null, active:Number($("mActive").value) };
+  const r = editingMemberId ? await api("/api/members/"+editingMemberId,"PUT",body) : await api("/api/members","POST",body);
+  if(r.ok){ closeMemberForm(); await loadRoster(); await loadLedger(); toast(editingMemberId?"Member updated":"Member added"); }
+  else authGuard(r) || toast((r.data&&r.data.error)||"Save failed");
+});
+
+$("memberRows").addEventListener("click", async e=>{
+  const ed = e.target.closest("[data-medit]"), dl = e.target.closest("[data-mdel]");
+  if(ed){ const m = roster.find(x=>x.id===+ed.dataset.medit); if(m){ openMemberForm(m); window.scrollTo({top:$("memberForm").offsetTop-80,behavior:"smooth"}); } }
+  if(dl){ if(confirm("Remove this member from the roster? Their past entries are kept.")){
+    const r = await api("/api/members/"+(+dl.dataset.mdel),"DELETE");
+    if(r.ok){ await loadRoster(); await loadLedger(); toast("Member removed"); } else authGuard(r);
+  }}
+});
 
 boot();
 </script>

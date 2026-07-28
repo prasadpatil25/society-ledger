@@ -1,18 +1,19 @@
 // GET /api/ledger?year=<id> — public, read-only.
 // Returns the selected year's meta (opening chained from prior years),
 // that year's entries, and the full list of years for the selector.
-import { json, getSociety, listYears } from "./_utils.js";
+import { json, getSociety, listYears, listMembers } from "./_utils.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const society = await getSociety(env);
   const years = await listYears(env);
+  const members = await listMembers(env, false);
 
   if (!years.length) {
     return json({
       meta: { name: society.name, due: society.due, opening: society.opening,
               fy_start: "2025-04-01", fy_end: "2026-03-31", label: "—", year_id: null },
-      years: [], entries: []
+      years: [], members: [], entries: []
     });
   }
 
@@ -34,6 +35,7 @@ export async function onRequestGet({ request, env }) {
             fy_start: year.fy_start, fy_end: year.fy_end, label: year.label, year_id: year.id },
     society_opening: society.opening,   // genesis balance (before the first year), for the admin field
     years,
+    members,
     entries: results || []
   });
 }

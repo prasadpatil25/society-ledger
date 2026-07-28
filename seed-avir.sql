@@ -33,3 +33,9 @@ INSERT INTO entries(date,particulars,type,amount,category,member,mode) VALUES
   ('2026-06-05','Annual Maintenance — Mahawadikar (final instalment)','credit',5000,NULL,'Mahawadikar','Cash'),
   ('2026-06-15','Sweeper salary','debit',1500,'Sweeper',NULL,NULL),
   ('2026-06-21','Annual Maintenance — Gaurkar (final instalment)','credit',5000,NULL,'Gaurkar','GPay');
+
+-- Populate the roster from the sample entries (only if empty).
+INSERT INTO members (name)
+SELECT DISTINCT member FROM entries
+WHERE member IS NOT NULL AND TRIM(member) <> ''
+  AND NOT EXISTS (SELECT 1 FROM members);

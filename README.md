@@ -1,6 +1,5 @@
 # Society Cash Book — shared ledger on Cloudflare
 
-
 A transparent society ledger with:
 
 - **Public read-only page** (`/`) — the shareable link for all members. No login, just the numbers.
@@ -131,6 +130,10 @@ SESSION_SECRET=any-long-random-string
 | POST   | `/api/years`        | yes  | create a financial year        |
 | PUT    | `/api/years/:id`    | yes  | edit a year (label / dates)    |
 | DELETE | `/api/years/:id`    | yes  | remove a year window           |
+| GET    | `/api/members`      | yes  | full roster (incl. contact)    |
+| POST   | `/api/members`      | yes  | add a member                   |
+| PUT    | `/api/members/:id`  | yes  | edit a member (renames cascade)|
+| DELETE | `/api/members/:id`  | yes  | remove a member from roster    |
 
 ---
 
@@ -151,12 +154,22 @@ adjust its dates), and each year's opening balance is computed automatically as 
 year's closing — no manual carry-over entry. "Opening before first year" (a society setting)
 is only the genesis balance before your very first year.
 
-> **Upgrading an existing database:** re-run the schema once to add the `years` table —
+> **Upgrading an existing database:** re-run the schema once to add the `years` / `members` / `login_attempts` tables —
 > `wrangler d1 execute society_ledger --remote --file=./schema.sql` (locally use `--local`).
 > It's safe to re-run: tables use `IF NOT EXISTS` and the first year is only seeded if none exist.
 
+## Members & dues
+
+The **Members** section in admin is the roster (flat, name, optional contact, active flag).
+When you record a maintenance payment, you pick the payer from this roster, so names stay
+consistent. The Collections view is driven by the roster: it lists **every** active member —
+including those who have paid nothing — sorted with defaulters first, and shows the total
+outstanding for the year. Renaming a member updates their past entries automatically;
+removing a member keeps their historical entries intact.
+
 ## Notes / limits
 
+- Login is rate-limited per IP: 5 failed attempts in 15 minutes locks that IP out for 15 minutes (tracked in the `login_attempts` table).
 - Admin password hashing uses PBKDF2 with 100,000 iterations — the Cloudflare Workers runtime rejects higher counts, so do not raise it in `hash-password.mjs`.
 
 - Single admin account. For multiple committee members with separate logins, add a `users`

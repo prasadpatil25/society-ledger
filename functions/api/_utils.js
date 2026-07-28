@@ -141,3 +141,11 @@ export function clientIp(request) {
     || request.headers.get("X-Forwarded-For")
     || "unknown";
 }
+
+export async function listMembers(env, includeContact = false) {
+  const cols = includeContact ? "id, flat, name, contact, active" : "id, flat, name, active";
+  const { results } = await env.DB
+    .prepare(`SELECT ${cols} FROM members ORDER BY (flat IS NULL), flat, name`)
+    .all();
+  return results || [];
+}
