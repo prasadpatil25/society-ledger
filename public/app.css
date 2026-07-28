@@ -25,8 +25,8 @@ a:hover{text-decoration:underline}
 
 .btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 15px;font-weight:500;display:inline-flex;align-items:center;gap:7px;transition:background .12s,border-color .12s}
 .btn:hover{border-color:var(--brass-soft)}
-.btn-primary{background:var(--ink);color:#fff;border-color:var(--ink)}
-.btn-primary:hover{background:#0c231f}
+.btn-primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn-primary:hover{opacity:.92}
 .btn-danger{color:var(--debit);border-color:var(--debit-bg)}
 .btn-danger:hover{background:var(--debit-bg)}
 .btn-sm{padding:6px 11px;font-size:13px;border-radius:8px}
@@ -98,7 +98,7 @@ h2{font-family:"Spectral",serif;font-weight:600;font-size:25px;margin:0;letter-s
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
 .seg button{border:0;background:transparent;font-weight:500;color:var(--ink-soft);padding:10px 15px}
 .seg button+button{border-left:1px solid var(--line)}
-.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 18px}
 
 .form{display:none;background:var(--card);border:1px solid var(--brass-soft);border-radius:14px;padding:18px;margin:0 0 18px}
@@ -129,7 +129,7 @@ footer{padding:40px 0 60px;border-top:1px solid var(--line);color:var(--ink-soft
 .sign .who{font-family:"Spectral",serif;font-size:19px;margin-top:4px;color:var(--ink)}
 .fine{font-size:13px;color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 
-.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;box-shadow:var(--shadow)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:11px 18px;border-radius:10px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:50;box-shadow:var(--shadow)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* login */
