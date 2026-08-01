@@ -158,9 +158,16 @@ adjust its dates), and each year's opening balance is computed automatically as 
 year's closing — no manual carry-over entry. "Opening before first year" (a society setting)
 is only the genesis balance before your very first year.
 
-> **Upgrading an existing database:** re-run the schema once to add the `years` / `members` / `login_attempts` / `templates` tables —
+> **Upgrading an existing database:** re-run the schema once to add the `years` / `members` / `login_attempts` / `templates` tables (and the `monthly` column on `templates`, see below) —
 > `wrangler d1 execute society_ledger --remote --file=./schema.sql` (locally use `--local`).
 > It's safe to re-run: tables use `IF NOT EXISTS` and the first year is only seeded if none exist.
+>
+> **Adding the `monthly` flag to an existing `templates` table** (needed for missing-entry
+> detection) — `CREATE TABLE IF NOT EXISTS` cannot add a column, so run once:
+> `wrangler d1 execute society_ledger --remote --command "ALTER TABLE templates ADD COLUMN monthly INTEGER NOT NULL DEFAULT 0"`
+> then mark your recurring ones:
+> `wrangler d1 execute society_ledger --remote --command "UPDATE templates SET monthly=1 WHERE category IN ('Sweeper','Electricity','Water')"`
+> The code tolerates the column being absent, so deploying before this runs won't break anything.
 
 ## Members & dues
 
@@ -178,6 +185,19 @@ The **Quick-add templates** section (admin) defines reusable entries for recurri
 it and the Add-entry form opens pre-filled with the type, particulars, category, and default
 amount, dated today — you just confirm the amount and save. Templates seed with a few common
 ones on first setup.
+
+Mark a template **Expected every month** to have the ledger flag gaps: for the selected year,
+any fully-elapsed month with no entry in that template's category shows up in a
+"Possibly missing entries" banner above the ledger (e.g. electricity or sweeper salary not
+recorded for a month). Seeded monthly for Sweeper/Electricity/Water.
+
+## Sorting & filtering the ledger
+
+Click a ledger column header (Date, Particulars, In, Out, Balance) to sort; click again to
+reverse, a third time to return to chronological order. The **All categories** dropdown filters
+by category, alongside the existing search box and the money-in/out tabs. The row number stays
+the chronological position regardless of sort, and the totals row reflects whatever is currently
+shown.
 
 ## Notes / limits
 

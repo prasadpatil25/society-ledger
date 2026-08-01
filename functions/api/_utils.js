@@ -151,10 +151,18 @@ export async function listMembers(env, includeContact = false) {
 }
 
 export async function listTemplates(env) {
-  const { results } = await env.DB
-    .prepare("SELECT id, label, particulars, type, amount, category, member, mode, sort FROM templates ORDER BY sort, id")
-    .all();
-  return results || [];
+  try {
+    const { results } = await env.DB
+      .prepare("SELECT id, label, particulars, type, amount, category, member, mode, monthly, sort FROM templates ORDER BY sort, id")
+      .all();
+    return results || [];
+  } catch (e) {
+    // 'monthly' column not migrated yet — return rows with monthly defaulted to 0
+    const { results } = await env.DB
+      .prepare("SELECT id, label, particulars, type, amount, category, member, mode, sort FROM templates ORDER BY sort, id")
+      .all();
+    return (results || []).map(r => ({ ...r, monthly: 0 }));
+  }
 }
 
 export function parseTemplate(b) {
@@ -172,5 +180,6 @@ export function parseTemplate(b) {
     category: b.category ? String(b.category).trim().slice(0, 60) : null,
     member: b.member ? String(b.member).trim().slice(0, 80) : null,
     mode: b.mode ? String(b.mode).trim().slice(0, 40) : null,
+    monthly: (b.monthly === 1 || b.monthly === true || b.monthly === "1") ? 1 : 0,
   };
 }

@@ -26,16 +26,17 @@ CREATE TABLE IF NOT EXISTS templates (
   category    TEXT,
   member      TEXT,
   mode        TEXT,
+  monthly     INTEGER NOT NULL DEFAULT 0,
   sort        INTEGER NOT NULL DEFAULT 0
 );
 
 -- Seed common recurring templates only if none exist yet.
-INSERT INTO templates (label, particulars, type, amount, category, sort)
+INSERT INTO templates (label, particulars, type, amount, category, monthly, sort)
 SELECT * FROM (
-  SELECT 'Sweeper salary'     AS label, 'Sweeper salary'     AS particulars, 'debit' AS type, 1500 AS amount, 'Sweeper'     AS category, 1 AS sort
-  UNION ALL SELECT 'Electricity bill',  'Electricity bill',  'debit', NULL, 'Electricity', 2
-  UNION ALL SELECT 'Water bill',        'Water bill',        'debit', NULL, 'Water',       3
-  UNION ALL SELECT 'Cleaning materials','Cleaning materials','debit', NULL, 'Cleaning',    4
+  SELECT 'Sweeper salary'     AS label, 'Sweeper salary'     AS particulars, 'debit' AS type, 1500 AS amount, 'Sweeper'     AS category, 1 AS monthly, 1 AS sort
+  UNION ALL SELECT 'Electricity bill',  'Electricity bill',  'debit', NULL, 'Electricity', 1, 2
+  UNION ALL SELECT 'Water bill',        'Water bill',        'debit', NULL, 'Water',       1, 3
+  UNION ALL SELECT 'Cleaning materials','Cleaning materials','debit', NULL, 'Cleaning',    0, 4
 ) WHERE NOT EXISTS (SELECT 1 FROM templates);
 
 -- Per-IP login throttling (populated by the login endpoint).

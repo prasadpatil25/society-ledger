@@ -174,3 +174,13 @@ footer{padding:40px 0 60px;border-top:1px solid var(--line);color:var(--ink-soft
   a[href]::after{content:""}
   @page{margin:16mm}
 }
+
+/* recurring-entry gap notice */
+.notice{background:var(--debit-bg);color:var(--debit);border:1px solid var(--debit);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:500;margin:0 0 16px;line-height:1.45}
+
+/* sortable ledger headers */
+.ledger th[data-sort]{cursor:pointer;user-select:none;white-space:nowrap}
+.ledger th[data-sort]:hover{color:var(--ink)}
+.ledger th.sorted{color:var(--ink)}
+.ledger th.sorted::after{content:"▲";font-size:9px;margin-left:5px;vertical-align:middle}
+.ledger th.sorted[aria-sort="descending"]::after{content:"▼"}

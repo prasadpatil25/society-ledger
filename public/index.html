@@ -62,6 +62,7 @@
 
   <section>
     <div class="sec-head"><span class="no">02</span><h2>The ledger</h2><span class="meta" id="ledgerMeta"></span></div>
+    <div id="gapNotice" class="notice" hidden></div>
     <div class="controls">
       <label class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
@@ -72,12 +73,13 @@
         <button data-f="credit" aria-pressed="false">Money in</button>
         <button data-f="debit" aria-pressed="false">Money out</button>
       </div>
+      <select id="catFilter" class="yearsel" aria-label="Filter by category"><option value="">All categories</option></select>
       <div class="spacer"></div>
       <button class="btn" id="csvBtn">Export CSV</button>
       <button class="btn" id="printBtn">Print / PDF</button>
     </div>
     <table class="ledger">
-      <thead><tr><th>#</th><th>Date</th><th>Particulars</th><th class="r">In</th><th class="r">Out</th><th class="r">Balance</th></tr></thead>
+      <thead><tr><th>#</th><th data-sort="date">Date</th><th data-sort="particulars">Particulars</th><th class="r" data-sort="in">In</th><th class="r" data-sort="out">Out</th><th class="r" data-sort="balance">Balance</th></tr></thead>
       <tbody id="rows"></tbody>
     </table>
     <div class="empty" id="empty" hidden>No entries recorded yet.</div>
@@ -95,14 +97,14 @@
 
 <script type="module">
 import { renderLedger, buildCSV } from "/ledger-ui.js";
-let data = { meta:{}, entries:[], years:[] }, filter="all", query="", yearId=null;
+let data = { meta:{}, entries:[], years:[] }, filter="all", query="", yearId=null, category="", sortKey="", sortDir="asc";
 
 async function load(){
   const res = await fetch("/api/ledger" + (yearId ? `?year=${yearId}` : ""));
   if(!res.ok){ document.getElementById("rows").innerHTML = `<tr><td colspan="6" class="empty">Couldn't load the ledger.</td></tr>`; return; }
   data = await res.json();
   yearId = data.meta.year_id;
-  fillYears();
+  fillYears(); fillCatFilter();
   paint();
 }
 function fillYears(){
@@ -111,9 +113,23 @@ function fillYears(){
   sel.hidden = false;
   sel.innerHTML = data.years.map(y => `<option value="${y.id}" ${y.id===data.meta.year_id?"selected":""}>${y.label}</option>`).join("");
 }
-function paint(){ renderLedger(data, { editable:false, filter, query }); }
+function paint(){ renderLedger(data, { editable:false, filter, query, category, sortKey, sortDir }); }
 
 document.getElementById("yearSelect").addEventListener("change", e=>{ yearId = +e.target.value; load(); });
+function fillCatFilter(){
+  const cats=[...new Set((data.entries||[]).map(e=>e.category).filter(Boolean))].sort();
+  const sel=document.getElementById("catFilter"); const cur=sel.value;
+  sel.innerHTML=`<option value="">All categories</option>`+cats.map(c=>`<option value="${c}">${c}</option>`).join("");
+  sel.value=cur;
+}
+document.getElementById("catFilter").addEventListener("change", e=>{ category=e.target.value; paint(); });
+document.getElementById("rows").closest("table").querySelector("thead").addEventListener("click", e=>{
+  const th=e.target.closest("th[data-sort]"); if(!th) return;
+  const key=th.dataset.sort;
+  if(sortKey===key){ if(sortDir==="asc") sortDir="desc"; else { sortKey=""; sortDir="asc"; } }
+  else { sortKey=key; sortDir="asc"; }
+  paint();
+});
 document.getElementById("q").addEventListener("input", e=>{ query = e.target.value; paint(); });
 document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click", ()=>{
   filter = b.dataset.f;

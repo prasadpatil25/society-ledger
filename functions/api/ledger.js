@@ -8,12 +8,17 @@ export async function onRequestGet({ request, env }) {
   const society = await getSociety(env);
   const years = await listYears(env);
   const members = await listMembers(env, false);
+  let monthlyCategories = [];
+  try {
+    const mc = await env.DB.prepare("SELECT DISTINCT category FROM templates WHERE monthly=1 AND type='debit' AND category IS NOT NULL").all();
+    monthlyCategories = (mc.results || []).map(r => r.category);
+  } catch (e) { /* 'monthly' column not migrated yet — feature stays dormant */ }
 
   if (!years.length) {
     return json({
       meta: { name: society.name, due: society.due, opening: society.opening,
               fy_start: "2025-04-01", fy_end: "2026-03-31", label: "—", year_id: null },
-      years: [], members: [], entries: []
+      years: [], members: [], entries: [], monthlyCategories
     });
   }
 
@@ -36,6 +41,7 @@ export async function onRequestGet({ request, env }) {
     society_opening: society.opening,   // genesis balance (before the first year), for the admin field
     years,
     members,
+    monthlyCategories,
     entries: results || []
   });
 }

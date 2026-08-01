@@ -10,7 +10,7 @@ export function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({ "&"
 const $ = id => document.getElementById(id);
 
 // Compute the balance sheet for the selected period.
-export function computeView(meta, entries){
+export function computeView(meta, entries, members){
   const start = meta.fy_start, end = meta.fy_end;
   const opening = parseFloat(meta.opening || "0");
   const due = parseFloat(meta.due || "0");
@@ -20,22 +20,34 @@ export function computeView(meta, entries){
     .sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.id - b.id));
 
   let bal = opening, totalIn = 0, totalOut = 0;
-  const rows = inRange.map(e => {
+  const rows = inRange.map((e, i) => {
     if(e.type === "credit"){ bal += e.amount; totalIn += e.amount; }
     else { bal -= e.amount; totalOut += e.amount; }
-    return { ...e, bal };
+    return { ...e, bal, seq: i + 1 };
   });
 
-  const members = {};
-  rows.filter(r=>r.type==="credit" && r.member).forEach(r => members[r.member] = (members[r.member]||0) + r.amount);
-  const byMember = Object.entries(members).map(([name,amt])=>({name,amt})).sort((a,b)=>b.amt-a.amt);
+  const paidByName = {};
+  rows.filter(r=>r.type==="credit" && r.member).forEach(r => paidByName[r.member] = (paidByName[r.member]||0) + r.amount);
+  const roster = (members || []).filter(m => m.active !== 0);
+  const seen = new Set();
+  const byMember = [];
+  roster.forEach(m => { seen.add(m.name); byMember.push({ name:m.name, flat:m.flat||"", paid:paidByName[m.name]||0 }); });
+  Object.keys(paidByName).forEach(n => { if(!seen.has(n)) byMember.push({ name:n, flat:"", paid:paidByName[n] }); });
+  byMember.forEach(d => {
+    d.due = due;
+    d.outstanding = due > 0 ? Math.max(0, due - d.paid) : 0;
+    d.status = due <= 0 ? "paid" : d.paid >= due ? "paid" : d.paid > 0 ? "partial" : "unpaid";
+  });
+  byMember.sort((a,b) => b.outstanding - a.outstanding || b.paid - a.paid || a.name.localeCompare(b.name));
+  const outstandingTotal = byMember.reduce((s,d)=>s+d.outstanding, 0);
+  const unpaidCount = byMember.filter(d => d.outstanding > 0).length;
 
   const cats = {};
   rows.filter(r=>r.type==="debit").forEach(r => { const k = r.category||"Other"; cats[k] = (cats[k]||0) + r.amount; });
   const byCategory = Object.entries(cats).map(([name,amt])=>({name,amt})).sort((a,b)=>b.amt-a.amt);
 
   const outside = entries.length - inRange.length;
-  return { rows, opening, due, totalIn, totalOut, closing: opening + totalIn - totalOut, byMember, byCategory, outside };
+  return { rows, opening, due, totalIn, totalOut, closing: opening + totalIn - totalOut, byMember, byCategory, outside, outstandingTotal, unpaidCount };
 }
 
 const CAT_COLORS = { Electricity:"#c08a1e", Water:"#2f7d8a", Sweeper:"#a83f2b", Cleaning:"#5b7a5b", Repair:"#8a5b7a" };
@@ -43,8 +55,10 @@ const CAT_COLORS = { Electricity:"#c08a1e", Water:"#2f7d8a", Sweeper:"#a83f2b", 
 // Paint everything. opts: { editable, filter, query }
 export function renderLedger(data, opts = {}){
   const { meta } = data;
-  const v = computeView(meta, data.entries);
+  const v = computeView(meta, data.entries, data.members);
+  renderGaps(meta, data.entries, data.monthlyCategories || []);
   const editable = !!opts.editable, filter = opts.filter || "all", query = (opts.query||"").trim().toLowerCase();
+  const category = opts.category || "", sortKey = opts.sortKey || "", sortDir = opts.sortDir || "asc";
 
   if($("socName")) $("socName").textContent = meta.name || "Society";
   if($("period")) $("period").textContent = `${fmtDate(meta.fy_start)} – ${fmtDate(meta.fy_end)}`;
@@ -58,15 +72,20 @@ export function renderLedger(data, opts = {}){
   $("ledgerMeta").textContent = `${v.rows.length} entries in period` + (v.outside ? ` · ${v.outside} outside` : "");
   if($("computedNote")) $("computedNote").textContent = `${v.rows.length} entries · opening ${fmt(v.opening)}`;
 
-  const paid = v.byMember.filter(m => v.due>0 && m.amt >= v.due).length;
-  $("collMeta").textContent = `${paid}/${v.byMember.length} paid in full · ${fmt(v.totalIn)} in · ${fmt(v.totalOut)} out`;
+  $("collMeta").textContent = v.unpaidCount > 0
+    ? `${fmt(v.outstandingTotal)} outstanding from ${v.unpaidCount} member${v.unpaidCount>1?"s":""} · ${fmt(v.totalIn)} collected`
+    : (v.byMember.length ? `All paid · ${fmt(v.totalIn)} collected` : `${fmt(v.totalIn)} collected`);
   $("incomeBars").innerHTML = v.byMember.length ? v.byMember.map(m=>{
-    const pct = v.due>0 ? Math.min(100, Math.round(m.amt/v.due*100)) : 100;
-    const done = v.due>0 && m.amt >= v.due;
-    return `<div class="bar${done?'':' pending'}"><div class="top"><span class="name">${esc(m.name)}</span>
-      <span><span class="amt cr">${fmt(m.amt)}</span> · <span class="status">${done?'Paid':(v.due>0?pct+'%':'')}</span></span></div>
+    const pct = m.due > 0 ? Math.min(100, Math.round(m.paid/m.due*100)) : 100;
+    const label = (m.flat ? `${esc(m.flat)} · ` : "") + esc(m.name);
+    const statusText = m.status === "paid" ? "Paid" : m.status === "unpaid" ? "Unpaid" : `${pct}%`;
+    const rightSide = m.outstanding > 0
+      ? `<span class="amt cr">${fmt(m.paid)}</span> · <span class="status">${statusText} · ${fmt(m.outstanding)} due</span>`
+      : `<span class="amt cr">${fmt(m.paid)}</span> · <span class="status">Paid</span>`;
+    return `<div class="bar${m.outstanding>0?' pending':''}"><div class="top"><span class="name">${label}</span>
+      <span>${rightSide}</span></div>
       <div class="trk"><div class="fill" style="width:${pct}%;background:var(--credit)"></div></div></div>`;
-  }).join("") : `<div class="muted">No collections recorded in this period.</div>`;
+  }).join("") : `<div class="muted">No members in the roster yet.</div>`;
 
   const cmax = Math.max(1, ...v.byCategory.map(c=>c.amt));
   $("expenseBars").innerHTML = v.byCategory.length ? v.byCategory.map(c=>`
@@ -80,8 +99,23 @@ export function renderLedger(data, opts = {}){
   const shown = v.rows.filter(r=>{
     if(filter==="credit" && r.type!=="credit") return false;
     if(filter==="debit" && r.type!=="debit") return false;
+    if(category && (r.category||"") !== category) return false;
     if(query && !(`${r.particulars} ${r.date} ${r.member||""} ${r.category||""}`.toLowerCase().includes(query))) return false;
     return true;
+  });
+  if(sortKey){
+    const dir = sortDir === "desc" ? -1 : 1;
+    const keyval = r => sortKey==="date" ? r.date
+      : sortKey==="particulars" ? r.particulars.toLowerCase()
+      : sortKey==="in" ? (r.type==="credit"?r.amount:0)
+      : sortKey==="out" ? (r.type==="debit"?r.amount:0)
+      : sortKey==="balance" ? r.bal : r.seq;
+    shown.sort((a,b)=>{ const av=keyval(a), bv=keyval(b); if(av<bv) return -dir; if(av>bv) return dir; return a.seq-b.seq; });
+  }
+  document.querySelectorAll(".ledger thead th[data-sort]").forEach(th=>{
+    const active = th.dataset.sort === sortKey;
+    th.classList.toggle("sorted", active);
+    th.setAttribute("aria-sort", active ? (sortDir==="desc"?"descending":"ascending") : "none");
   });
   if($("empty")) $("empty").hidden = shown.length>0;
   let rowsHtml = shown.map((r,i)=>{
@@ -92,7 +126,7 @@ export function renderLedger(data, opts = {}){
         <button class="btn btn-sm" data-edit="${r.id}">Edit</button>
         <button class="btn btn-sm btn-danger" data-del="${r.id}">Delete</button></span></td>` : "";
     return `<tr>
-      <td class="folio">${String(i+1).padStart(2,'0')}</td>
+      <td class="folio">${String(r.seq).padStart(2,'0')}</td>
       <td class="date">${fmtDate(r.date)}</td>
       <td>${esc(r.particulars)}${tagHtml}</td>
       <td class="r num ${cr?'cr':''}">${cr?fmt(cr):'—'}</td>
@@ -165,4 +199,34 @@ export function buildCSV(data){
   L.push("");
   L.push(["","","Total","","","", v.totalIn, v.totalOut, v.closing].map(cell).join(","));
   return L.join("\r\n");
+}
+
+// Flag elapsed months in the selected year that are missing an expected recurring entry.
+function renderGaps(meta, entries, monthlyCats){
+  const el = document.getElementById("gapNotice");
+  if(!el) return;
+  if(!monthlyCats.length || !meta.fy_start){ el.hidden = true; el.innerHTML = ""; return; }
+  const today = new Date().toISOString().slice(0,10);
+  const months = [];
+  let d = new Date(meta.fy_start.slice(0,7) + "-01T00:00:00Z");
+  const endD = new Date(meta.fy_end.slice(0,7) + "-01T00:00:00Z");
+  while(d <= endD){
+    const ym = d.toISOString().slice(0,7);
+    d.setUTCMonth(d.getUTCMonth() + 1);           // move to next month
+    if(d.toISOString().slice(0,10) <= today) months.push(ym);   // include only if that month has fully ended
+  }
+  if(!months.length){ el.hidden = true; el.innerHTML = ""; return; }
+  const present = new Set();
+  entries.filter(e => e.type === "debit" && e.category).forEach(e => present.add(e.category + "|" + e.date.slice(0,7)));
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const label = ym => `${MON[+ym.slice(5,7)-1]} ${ym.slice(0,4)}`;
+  const gaps = [];
+  monthlyCats.forEach(cat => {
+    const miss = months.filter(m => !present.has(cat + "|" + m));
+    if(miss.length) gaps.push({ cat, miss });
+  });
+  if(!gaps.length){ el.hidden = true; el.innerHTML = ""; return; }
+  el.hidden = false;
+  el.innerHTML = `<strong>Possibly missing entries</strong> — no record found for: `
+    + gaps.map(g => `${esc(g.cat)} (${g.miss.map(label).join(", ")})`).join("; ") + ".";
 }

@@ -90,6 +90,7 @@
 
   <section>
     <div class="sec-head"><span class="no">02</span><h2>The ledger</h2><span class="meta" id="ledgerMeta"></span></div>
+    <div id="gapNotice" class="notice" hidden></div>
     <div class="toolbar">
       <button class="btn btn-primary" id="addBtn">+ Add entry</button>
       <button class="btn" id="csvBtn">Export CSV</button>
@@ -127,10 +128,11 @@
         <button data-f="credit" aria-pressed="false">Money in</button>
         <button data-f="debit" aria-pressed="false">Money out</button>
       </div>
+      <select id="catFilter" class="yearsel" aria-label="Filter by category"><option value="">All categories</option></select>
     </div>
 
     <table class="ledger">
-      <thead><tr><th>#</th><th>Date</th><th>Particulars</th><th class="r">In</th><th class="r">Out</th><th class="r">Balance</th><th class="r col-edit">Edit</th></tr></thead>
+      <thead><tr><th>#</th><th data-sort="date">Date</th><th data-sort="particulars">Particulars</th><th class="r" data-sort="in">In</th><th class="r" data-sort="out">Out</th><th class="r" data-sort="balance">Balance</th><th class="r col-edit">Edit</th></tr></thead>
       <tbody id="rows"></tbody>
     </table>
     <div class="empty" id="empty" hidden>No entries in this year yet. Add your first one above.</div>
@@ -171,6 +173,7 @@
         <div class="fld"><label for="tParticulars">Particulars</label><input type="text" id="tParticulars" placeholder="e.g. Sweeper salary"></div>
         <div class="fld"><label for="tCategory">Category</label><input type="text" id="tCategory" list="catList" placeholder="e.g. Sweeper"></div>
         <div class="fld"><label for="tMode">Mode (money in)</label><input type="text" id="tMode" placeholder="Cash / Bank / GPay"></div>
+        <div class="fld"><label for="tMonthly">Expected every month?</label><select id="tMonthly"><option value="0">No</option><option value="1">Yes</option></select></div>
       </div>
       <div class="form-actions"><button class="btn btn-primary" id="saveTpl">Save template</button><button class="btn" id="cancelTpl">Cancel</button></div>
     </div>
@@ -232,7 +235,7 @@ async function loadLedger(){
   if(!r.ok){ toast("Couldn't load ledger"); return; }
   data = r.data;
   yearId = data.meta.year_id;
-  fillYears();
+  fillYears(); fillCatFilter();
   const m = data.meta;
   $("yearLabel").value = m.label || "";
   $("fyStart").value = m.fy_start; $("fyEnd").value = m.fy_end;
@@ -244,7 +247,7 @@ function fillYears(){
   const sel = $("yearSelect");
   sel.innerHTML = (data.years||[]).map(y => `<option value="${y.id}" ${y.id===data.meta.year_id?"selected":""}>${y.label}</option>`).join("");
 }
-function paint(){ renderLedger(data, { editable:true, filter, query }); }
+function paint(){ renderLedger(data, { editable:true, filter, query, category, sortKey, sortDir }); }
 
 $("yearSelect").addEventListener("change", e=>{ yearId = +e.target.value; loadLedger(); });
 
@@ -298,6 +301,20 @@ $("delYearBtn").addEventListener("click", async ()=>{
 });
 
 // ---- search + filter ----
+function fillCatFilter(){
+  const cats=[...new Set((data.entries||[]).map(e=>e.category).filter(Boolean))].sort();
+  const sel=$("catFilter"); const cur=sel.value;
+  sel.innerHTML=`<option value="">All categories</option>`+cats.map(c=>`<option value="${c}">${c}</option>`).join("");
+  sel.value=cur;
+}
+$("catFilter").addEventListener("change", e=>{ category=e.target.value; paint(); });
+$("rows").closest("table").querySelector("thead").addEventListener("click", e=>{
+  const th=e.target.closest("th[data-sort]"); if(!th) return;
+  const key=th.dataset.sort;
+  if(sortKey===key){ if(sortDir==="asc") sortDir="desc"; else { sortKey=""; sortDir="asc"; } }
+  else { sortKey=key; sortDir="asc"; }
+  paint();
+});
 $("q").addEventListener("input", e=>{ query=e.target.value; paint(); });
 document.querySelectorAll(".seg button").forEach(b=>b.addEventListener("click", ()=>{
   filter=b.dataset.f;
@@ -484,7 +501,7 @@ async function loadTemplates(){
   $("tplMeta").textContent = `${templates.length} template${templates.length===1?"":"s"}`;
   $("tplEmpty").hidden = templates.length > 0;
   $("tplRows").innerHTML = templates.map(t => `<tr>
-    <td>${esc(t.label)}</td>
+    <td>${esc(t.label)}${t.monthly?' <span class="tag">monthly</span>':''}</td>
     <td>${esc(t.particulars)}${t.category?`<div class="tag">${esc(t.category)}</div>`:""}</td>
     <td class="${t.type==='credit'?'cr':'db'}">${t.type==='credit'?'In':'Out'}</td>
     <td class="r num">${(t.amount!=null&&t.amount!=="")?fmt(t.amount):"—"}</td>
@@ -503,6 +520,7 @@ function openTplForm(t){
   $("tParticulars").value = t ? t.particulars : "";
   $("tCategory").value = t ? (t.category||"") : "";
   $("tMode").value = t ? (t.mode||"") : "";
+  $("tMonthly").value = t ? String(t.monthly?1:0) : "0";
   $("tplForm").classList.add("open");
   $("tLabel").focus();
 }
@@ -518,7 +536,8 @@ $("saveTpl").addEventListener("click", async ()=>{
     label, particulars, type: $("tType").value,
     amount: $("tAmount").value.trim()==="" ? null : Number($("tAmount").value),
     category: $("tCategory").value.trim()||null,
-    mode: $("tMode").value.trim()||null
+    mode: $("tMode").value.trim()||null,
+    monthly: Number($("tMonthly").value)
   };
   const r = editingTplId ? await api("/api/templates/"+editingTplId,"PUT",body) : await api("/api/templates","POST",body);
   if(r.ok){ closeTplForm(); await loadTemplates(); toast(editingTplId?"Template updated":"Template added"); }

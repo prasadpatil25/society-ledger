@@ -8,9 +8,15 @@ export async function onRequestPut({ request, env, params }) {
   let b; try { b = await request.json(); } catch { return json({ error: "Bad request" }, 400); }
   const t = parseTemplate(b);
   if (t.error) return json({ error: t.error }, 400);
-  await env.DB
-    .prepare("UPDATE templates SET label=?,particulars=?,type=?,amount=?,category=?,member=?,mode=? WHERE id=?")
-    .bind(t.label, t.particulars, t.type, t.amount, t.category, t.member, t.mode, id).run();
+  try {
+    await env.DB
+      .prepare("UPDATE templates SET label=?,particulars=?,type=?,amount=?,category=?,member=?,mode=?,monthly=? WHERE id=?")
+      .bind(t.label, t.particulars, t.type, t.amount, t.category, t.member, t.mode, t.monthly, id).run();
+  } catch (e) {
+    await env.DB
+      .prepare("UPDATE templates SET label=?,particulars=?,type=?,amount=?,category=?,member=?,mode=? WHERE id=?")
+      .bind(t.label, t.particulars, t.type, t.amount, t.category, t.member, t.mode, id).run();
+  }
   return json({ ok: true });
 }
 
