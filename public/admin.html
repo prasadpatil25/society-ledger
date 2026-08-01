@@ -199,7 +199,7 @@ import { renderLedger, fmt, buildCSV, esc } from "/ledger-ui.js";
 const $ = id => document.getElementById(id);
 const toast = (m, ms=2200) => { const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),ms); };
 
-let data = { meta:{}, entries:[], years:[] }, filter="all", query="", editingId=null, yearId=null;
+let data = { meta:{}, entries:[], years:[] }, filter="all", query="", editingId=null, yearId=null, category="", sortKey="", sortDir="asc";
 
 async function api(path, method="GET", body){
   const opt = { method, headers:{} };
