@@ -9,17 +9,20 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch { return json({ error: "Bad request" }, 400); }
   if (!Array.isArray(body.entries)) return json({ error: "Expected an entries array" }, 400);
 
-  const existing = await env.DB.prepare("SELECT date, particulars, type, amount FROM entries").all();
-  const seen = new Set((existing.results || []).map(r => `${r.date}|${r.particulars}|${r.type}|${r.amount}`));
+  const existing = await env.DB.prepare("SELECT date, particulars, type, amount, member, category FROM entries").all();
+  const seen = new Set((existing.results || []).map(r => `${r.date}|${r.particulars}|${r.type}|${r.amount}|${r.member || ""}|${r.category || ""}`));
+  const yrs = (await env.DB.prepare("SELECT fy_start, fy_end FROM years").all()).results || [];
+  const covered = d => yrs.some(y => d >= y.fy_start && d <= y.fy_end);
 
   const stmts = [];
-  let added = 0, skipped = 0, invalid = 0;
+  let added = 0, skipped = 0, invalid = 0, outsideYears = 0;
   for (const raw of body.entries) {
     if (!validEntry(raw)) { invalid++; continue; }
     const e = normalizeEntry(raw);
-    const key = `${e.date}|${e.particulars}|${e.type}|${e.amount}`;
+    const key = `${e.date}|${e.particulars}|${e.type}|${e.amount}|${e.member || ""}|${e.category || ""}`;
     if (seen.has(key)) { skipped++; continue; }
     seen.add(key);
+    if (!covered(e.date)) outsideYears++;
     stmts.push(env.DB
       .prepare("INSERT INTO entries(date,particulars,type,amount,category,member,mode) VALUES(?,?,?,?,?,?,?)")
       .bind(e.date, e.particulars, e.type, e.amount, e.category, e.member, e.mode));
@@ -29,5 +32,5 @@ export async function onRequestPost({ request, env }) {
   for (let i = 0; i < stmts.length; i += 50) {
     await env.DB.batch(stmts.slice(i, i + 50));
   }
-  return json({ ok: true, added, skipped, invalid });
+  return json({ ok: true, added, skipped, invalid, outsideYears });
 }

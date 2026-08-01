@@ -618,8 +618,10 @@ $("importCsv").addEventListener("change", async e=>{
   const r = await api("/api/entries/bulk","POST",{ entries });
   if(r.ok){
     await loadLedger();
-    const { added, skipped, invalid } = r.data;
-    if(added===0 && skipped>0 && !invalid){
+    const { added, skipped, invalid, outsideYears } = r.data;
+    if(outsideYears){
+      toast(`Imported ${added} — but ${outsideYears} fall outside every defined financial year, so they won't show until a year covers their dates.`, 6000);
+    } else if(added===0 && skipped>0 && !invalid){
       toast(`Nothing added — all ${skipped} of these entries are already in the ledger.`, 4500);
     } else if(added===0 && !skipped && invalid){
       toast(`Nothing added — ${invalid} row(s) were invalid (check dates are YYYY-MM-DD).`, 4500);
