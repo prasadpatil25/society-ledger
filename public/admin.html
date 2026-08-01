@@ -94,6 +94,8 @@
     <div class="toolbar">
       <button class="btn btn-primary" id="addBtn">+ Add entry</button>
       <button class="btn" id="csvBtn">Export CSV</button>
+      <button class="btn" id="importCsvBtn">Import CSV</button>
+      <input type="file" id="importCsv" accept=".csv,text/csv" hidden>
       <button class="btn" id="printBtn">Print / PDF</button>
       <button class="btn btn-danger" id="delYearBtn">Delete this year</button>
     </div>
@@ -551,6 +553,71 @@ $("tplRows").addEventListener("click", async e=>{
     const r = await api("/api/templates/"+(+dl.dataset.tdel),"DELETE");
     if(r.ok){ await loadTemplates(); toast("Template deleted"); } else authGuard(r);
   }}
+});
+
+// ---- CSV import (reads the Export CSV format) ----
+function parseCSVText(text){
+  const rows=[]; let row=[], field="", inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else inQ=false; }
+      else field+=c;
+    } else {
+      if(c==='"') inQ=true;
+      else if(c===',') { row.push(field); field=""; }
+      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=""; }
+      else if(c==='\r'){ /* skip */ }
+      else field+=c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+function parseLedgerCSV(text){
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  const rows=parseCSVText(text);
+  let hi=-1; const map={};
+  for(let i=0;i<rows.length;i++){
+    const low=rows[i].map(x=>String(x).trim().toLowerCase());
+    if(low.includes("date") && low.includes("particulars")){
+      hi=i;
+      ["date","particulars","category","member","mode","in","out"].forEach(k=>{ map[k]=low.indexOf(k); });
+      break;
+    }
+  }
+  if(hi<0) throw new Error("No header row found (need Date, Particulars, In, Out)");
+  if(map.date<0 || map.particulars<0 || (map.in<0 && map.out<0)) throw new Error("CSV is missing required columns");
+  const out=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i];
+    const cell=k => (map[k]>=0 && r[map[k]]!=null) ? String(r[map[k]]).trim() : "";
+    const date=cell("date"), particulars=cell("particulars");
+    if(particulars.toLowerCase()==="total") continue;
+    if(!date && !particulars) continue;
+    const inRaw=cell("in").replace(/[₹,]/g,"").replace(/—/g,"").trim();
+    const outRaw=cell("out").replace(/[₹,]/g,"").replace(/—/g,"").trim();
+    const isCredit = inRaw!=="" && Number(inRaw)>0;
+    const amount = Number(isCredit?inRaw:outRaw);
+    if(!(amount>0)) continue;
+    out.push({ date, particulars, type:isCredit?"credit":"debit", amount,
+      category:cell("category")||null, member:cell("member")||null, mode:cell("mode")||null });
+  }
+  return out;
+}
+$("importCsvBtn").addEventListener("click", ()=>$("importCsv").click());
+$("importCsv").addEventListener("change", async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  let entries;
+  try{ entries = parseLedgerCSV(await f.text()); }
+  catch(err){ toast(err.message||"Couldn't read that CSV"); e.target.value=""; return; }
+  if(!entries.length){ toast("No entries found in that file"); e.target.value=""; return; }
+  if(!confirm(`Import ${entries.length} entr${entries.length===1?"y":"ies"} from this file?\nExact duplicates already in the ledger will be skipped.`)){ e.target.value=""; return; }
+  const r = await api("/api/entries/bulk","POST",{ entries });
+  if(r.ok){ await loadLedger();
+    toast(`Imported ${r.data.added}` + (r.data.skipped?` · ${r.data.skipped} duplicate(s) skipped`:"") + (r.data.invalid?` · ${r.data.invalid} invalid`:"")); }
+  else authGuard(r) || toast((r.data&&r.data.error)||"Import failed");
+  e.target.value="";
 });
 
 boot();

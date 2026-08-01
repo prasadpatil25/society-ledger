@@ -127,6 +127,7 @@ SESSION_SECRET=any-long-random-string
 | POST   | `/api/entries`      | yes  | add an entry                   |
 | PUT    | `/api/entries/:id`  | yes  | edit an entry                  |
 | DELETE | `/api/entries/:id`  | yes  | delete an entry                |
+| POST   | `/api/entries/bulk` | yes  | import many entries (dedup)    |
 | POST   | `/api/years`        | yes  | create a financial year        |
 | PUT    | `/api/years/:id`    | yes  | edit a year (label / dates)    |
 | DELETE | `/api/years/:id`    | yes  | remove a year window           |
@@ -188,7 +189,7 @@ ones on first setup.
 
 Mark a template **Expected every month** to have the ledger flag gaps: for the selected year,
 any fully-elapsed month with no entry in that template's category shows up in a
-"Possibly missing entries" banner above the ledger (e.g. electricity or sweeper salary not
+"Possibly missing entries" banner above the ledger (admin view only) (e.g. electricity or sweeper salary not
 recorded for a month). Seeded monthly for Sweeper/Electricity/Water.
 
 ## Sorting & filtering the ledger
@@ -198,6 +199,15 @@ reverse, a third time to return to chronological order. The **All categories** d
 by category, alongside the existing search box and the money-in/out tabs. The row number stays
 the chronological position regardless of sort, and the totals row reflects whatever is currently
 shown.
+
+## CSV import
+
+Admin can **Import CSV** to bulk-add entries from a file in the Export-CSV format (round-trip:
+export, edit in a spreadsheet, re-import). It reads the Date / Particulars / Category / Member /
+Mode / In / Out columns; dates must be ISO (`YYYY-MM-DD`, as exported). Entries land in whichever
+financial year covers their date. Rows that exactly match an existing entry (date, particulars,
+type, amount) are skipped, so re-importing the same file won't duplicate. The result reports how
+many were added, skipped, and invalid.
 
 ## Notes / limits
 
