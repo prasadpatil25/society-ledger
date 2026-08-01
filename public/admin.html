@@ -197,7 +197,7 @@
 <script type="module">
 import { renderLedger, fmt, buildCSV, esc } from "/ledger-ui.js";
 const $ = id => document.getElementById(id);
-const toast = m => { const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); };
+const toast = (m, ms=2200) => { const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),ms); };
 
 let data = { meta:{}, entries:[], years:[] }, filter="all", query="", editingId=null, yearId=null;
 
@@ -614,9 +614,17 @@ $("importCsv").addEventListener("change", async e=>{
   if(!entries.length){ toast("No entries found in that file"); e.target.value=""; return; }
   if(!confirm(`Import ${entries.length} entr${entries.length===1?"y":"ies"} from this file?\nExact duplicates already in the ledger will be skipped.`)){ e.target.value=""; return; }
   const r = await api("/api/entries/bulk","POST",{ entries });
-  if(r.ok){ await loadLedger();
-    toast(`Imported ${r.data.added}` + (r.data.skipped?` · ${r.data.skipped} duplicate(s) skipped`:"") + (r.data.invalid?` · ${r.data.invalid} invalid`:"")); }
-  else authGuard(r) || toast((r.data&&r.data.error)||"Import failed");
+  if(r.ok){
+    await loadLedger();
+    const { added, skipped, invalid } = r.data;
+    if(added===0 && skipped>0 && !invalid){
+      toast(`Nothing added — all ${skipped} of these entries are already in the ledger.`, 4500);
+    } else if(added===0 && !skipped && invalid){
+      toast(`Nothing added — ${invalid} row(s) were invalid (check dates are YYYY-MM-DD).`, 4500);
+    } else {
+      toast(`Imported ${added} new` + (skipped?` · ${skipped} already existed`:"") + (invalid?` · ${invalid} invalid`:""), 4500);
+    }
+  } else authGuard(r) || toast((r.data&&r.data.error)||"Import failed");
   e.target.value="";
 });
 
