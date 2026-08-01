@@ -237,13 +237,15 @@ async function loadLedger(){
   if(!r.ok){ toast("Couldn't load ledger"); return; }
   data = r.data;
   yearId = data.meta.year_id;
-  fillYears(); fillCatFilter();
-  const m = data.meta;
-  $("yearLabel").value = m.label || "";
-  $("fyStart").value = m.fy_start; $("fyEnd").value = m.fy_end;
-  $("due").value = m.due; $("nameField").value = m.name; $("opening").value = data.society_opening ?? "";
-  $("openingNote").textContent = `This year opens at ${fmt(m.opening)} — carried forward automatically from earlier years. Edit "Opening before first year" only to set the very first starting balance.`;
-  paint();
+  try {
+    fillYears(); fillCatFilter();
+    const m = data.meta;
+    $("yearLabel").value = m.label || "";
+    $("fyStart").value = m.fy_start; $("fyEnd").value = m.fy_end;
+    $("due").value = m.due; $("nameField").value = m.name; $("opening").value = data.society_opening ?? "";
+    $("openingNote").textContent = `This year opens at ${fmt(m.opening)} — carried forward automatically from earlier years. Edit "Opening before first year" only to set the very first starting balance.`;
+  } catch(err){ console.error("settings panel update skipped:", err); }
+  paint();   // always render the ledger, even if the settings panel above hiccups
 }
 function fillYears(){
   const sel = $("yearSelect");

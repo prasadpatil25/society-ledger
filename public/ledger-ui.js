@@ -56,7 +56,7 @@ const CAT_COLORS = { Electricity:"#c08a1e", Water:"#2f7d8a", Sweeper:"#a83f2b", 
 export function renderLedger(data, opts = {}){
   const { meta } = data;
   const v = computeView(meta, data.entries, data.members);
-  renderGaps(meta, data.entries, data.monthlyCategories || []);
+  try { renderGaps(meta, data.entries, data.monthlyCategories || []); } catch(err){ console.error("gap notice skipped:", err); }
   const editable = !!opts.editable, filter = opts.filter || "all", query = (opts.query||"").trim().toLowerCase();
   const category = opts.category || "", sortKey = opts.sortKey || "", sortDir = opts.sortDir || "asc";
 
@@ -217,7 +217,7 @@ function renderGaps(meta, entries, monthlyCats){
   }
   if(!months.length){ el.hidden = true; el.innerHTML = ""; return; }
   const present = new Set();
-  entries.filter(e => e.type === "debit" && e.category).forEach(e => present.add(e.category + "|" + e.date.slice(0,7)));
+  entries.filter(e => e.type === "debit" && e.category && typeof e.date === "string").forEach(e => present.add(e.category + "|" + e.date.slice(0,7)));
   const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const label = ym => `${MON[+ym.slice(5,7)-1]} ${ym.slice(0,4)}`;
   const gaps = [];
