@@ -3,6 +3,7 @@
   --line:#dbe2db;--brass:#a9822f;--brass-soft:#c9a765;
   --credit:#0f6b4f;--credit-bg:#e4f0ea;--debit:#a83f2b;--debit-bg:#f4e6e1;
   --shadow:0 1px 2px rgba(18,48,43,.06),0 8px 30px rgba(18,48,43,.06);--maxw:1120px;
+  --band:rgba(18,48,43,.045);
 }
 :root{color-scheme:light}
 :root[data-theme="dark"]{
@@ -10,6 +11,7 @@
   --line:#26332e;--brass:#c9a765;--brass-soft:#8f6f2e;
   --credit:#5cc79a;--credit-bg:#122a22;--debit:#e08a72;--debit-bg:#2c1c18;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.45);
+  --band:rgba(255,255,255,.045);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -114,6 +116,10 @@ h2{font-family:"Spectral",serif;font-weight:600;font-size:25px;margin:0;letter-s
 .ledger th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:0 14px 10px;border-bottom:2px solid var(--brass-soft);white-space:nowrap}
 .ledger td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 .ledger tbody tr:hover{background:var(--card)}
+/* alternating shading per calendar-month group */
+.ledger tbody tr.month-band td{background:var(--band)}
+.ledger tbody tr.month-band:hover td{background:var(--card)}
+.ledger tbody tr.total-row td,.ledger tbody tr.total-row:hover td{background:var(--card)}
 .r{text-align:right}
 .folio{font-family:"IBM Plex Mono";color:var(--brass);font-weight:600;font-size:12px}
 .date{color:var(--ink-soft);white-space:nowrap}
@@ -162,7 +168,7 @@ footer{padding:40px 0 60px;border-top:1px solid var(--line);color:var(--ink-soft
   :root, :root[data-theme="dark"]{
     --paper:#fff;--card:#fff;--ink:#111;--ink-soft:#333;--ink-faint:#555;--line:#c9c9c9;
     --brass:#7a5f1e;--brass-soft:#b89442;--credit:#0a5c43;--credit-bg:#fff;
-    --debit:#8f3320;--debit-bg:#fff;--shadow:none;color-scheme:light;
+    --debit:#8f3320;--debit-bg:#fff;--shadow:none;--band:#f1f1f1;color-scheme:light;
   }
   body{background:#fff}
   .topbar,.settings,.toolbar,.form,.controls,.fine,#themeBtn,.rowact,.col-edit,.sec-head .meta,.openingNote,#openingNote{display:none!important}

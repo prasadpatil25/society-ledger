@@ -118,14 +118,24 @@ export function renderLedger(data, opts = {}){
     th.setAttribute("aria-sort", active ? (sortDir==="desc"?"descending":"ascending") : "none");
   });
   if($("empty")) $("empty").hidden = shown.length>0;
+  // Band alternating month groups — only meaningful while rows are in date order.
+  const bandable = !sortKey || sortKey === "date";
+  let bandOn = false, prevYm = null;
   let rowsHtml = shown.map((r,i)=>{
+    let bandCls = "";
+    if(bandable && typeof r.date === "string"){
+      const ym = r.date.slice(0,7);
+      if(prevYm !== null && ym !== prevYm) bandOn = !bandOn;
+      prevYm = ym;
+      if(bandOn) bandCls = " month-band";
+    }
     const cr = r.type==="credit"?r.amount:0, db = r.type==="debit"?r.amount:0;
     const tag = r.category ? esc(r.category) : (r.mode?esc(r.mode):"");
     const tagHtml = tag ? `<div class="tag">${tag}${r.member?` · ${esc(r.member)}`:""}</div>` : (r.member?`<div class="tag">${esc(r.member)}</div>`:"");
     const act = editable ? `<td class="r col-edit"><span class="rowact">
         <button class="btn btn-sm" data-edit="${r.id}">Edit</button>
         <button class="btn btn-sm btn-danger" data-del="${r.id}">Delete</button></span></td>` : "";
-    return `<tr>
+    return `<tr class="${bandCls.trim()}">
       <td class="folio">${String(r.seq).padStart(2,'0')}</td>
       <td class="date">${fmtDate(r.date)}</td>
       <td>${esc(r.particulars)}${tagHtml}</td>
