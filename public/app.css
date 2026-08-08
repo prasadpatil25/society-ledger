@@ -17,6 +17,7 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
+html,body{max-width:100%;overflow-x:hidden}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
@@ -84,7 +85,7 @@ h2{font-family:"Spectral",serif;font-weight:600;font-size:25px;margin:0;letter-s
 .bar{padding:11px 0;border-bottom:1px solid var(--line)}
 .bar:last-child{border-bottom:0}
 .bar .top{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px}
-.bar .name{font-weight:500}
+.bar .name{font-weight:500;overflow-wrap:anywhere;min-width:0}
 .bar .amt{font-family:"IBM Plex Mono";font-weight:600}
 .bar .amt.cr{color:var(--credit)}.bar .amt.db{color:var(--debit)}
 .bar .status{font-size:12px;color:var(--credit);font-weight:600}
@@ -114,7 +115,7 @@ h2{font-family:"Spectral",serif;font-weight:600;font-size:25px;margin:0;letter-s
 
 .ledger{width:100%;border-collapse:collapse;font-size:14px}
 .ledger th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:0 14px 10px;border-bottom:2px solid var(--brass-soft);white-space:nowrap}
-.ledger td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.ledger td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
 .ledger tbody tr:hover{background:var(--card)}
 /* alternating shading per calendar-month group */
 .ledger tbody tr.month-band td{background:var(--band)}
@@ -151,9 +152,84 @@ footer{padding:40px 0 60px;border-top:1px solid var(--line);color:var(--ink-soft
 .login .err{color:var(--debit);font-size:13px;font-weight:500;min-height:18px;margin:2px 0 10px}
 .login button{width:100%;justify-content:center;padding:12px}
 
+/* ============ tablet ============ */
 @media (max-width:760px){
-  .hero{grid-template-columns:1fr}.split{grid-template-columns:1fr;gap:30px}
-  .signoff{grid-template-columns:1fr}.ledger .hide-sm{display:none}
+  .wrap{padding:0 16px}
+  .hero{grid-template-columns:1fr;gap:18px}
+  .split{grid-template-columns:1fr;gap:30px}
+  .signoff{grid-template-columns:1fr}
+  .mast{padding:28px 0 20px}
+  section{padding:30px 0}
+  .settings{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));padding:14px;gap:12px}
+  .form-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ============ phone ============ */
+@media (max-width:640px){
+  /* inputs at 16px stop iOS auto-zooming on focus */
+  input,select,textarea,.btn,button{font-size:16px}
+  .btn{padding:11px 14px}                      /* ~44px touch target */
+  .btn-sm{padding:9px 12px;font-size:14px}
+
+  h1{font-size:clamp(28px,8vw,38px)}
+  .balance{font-size:clamp(32px,10vw,42px)}
+  .passbook,.chartcard{padding:18px 18px 14px}
+  .chart-wrap{min-height:120px}
+
+  /* header controls stack into a tidy grid instead of a cramped row */
+  .topbar{gap:8px}
+  .topbar .eyebrow{flex:1 1 100%}
+  .topbar .spacer{display:none}
+  .topbar .btn,.topbar .yearsel,.topbar a{flex:1 1 calc(50% - 4px);justify-content:center;text-align:center}
+
+  .settings{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .form-actions{flex-direction:column}
+  .form-actions .btn{width:100%;justify-content:center}
+  .toolbar .btn{flex:1 1 calc(50% - 5px);justify-content:center}
+  .controls{gap:8px}
+  .search{flex:1 1 100%}
+  .seg{flex:1 1 100%}
+  .seg button{flex:1}
+  #catFilter{flex:1 1 100%;width:100%}
+  .quickadd{gap:6px}
+
+  .sec-head{gap:8px}
+  .sec-head .meta{margin-left:0;flex:1 1 100%}
+
+  /* ---- tables become stacked cards ---- */
+  .ledger thead{display:none}
+  .ledger,.ledger tbody,.ledger tr,.ledger td{display:block;width:100%}
+  .ledger tr{
+    border:1px solid var(--line);border-radius:12px;background:var(--card);
+    padding:12px 14px;margin:0 0 10px;
+  }
+  .ledger td{
+    border:0;padding:4px 0;text-align:left;
+    display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+  }
+  .ledger td::before{
+    content:attr(data-label);flex:0 0 auto;
+    font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-faint);
+  }
+  .ledger td[data-label=""]::before{content:none}
+  .ledger td.nil{display:none}                 /* hide empty In/Out cells */
+  .ledger td.particulars{
+    display:block;font-weight:600;font-size:15px;padding-bottom:6px;
+  }
+  .ledger td.particulars::before{content:none}
+  .ledger td.bal{
+    border-top:1px solid var(--line);margin-top:6px;padding-top:8px;
+  }
+  .ledger td .rowact{display:flex;gap:8px;width:100%}
+  .ledger td .rowact .btn{flex:1;justify-content:center}
+  .ledger tbody tr.month-band td,.ledger tbody tr.month-band:hover td{background:transparent}
+  .ledger tbody tr.month-band{background:var(--band)}
+  .ledger tbody tr:hover td{background:transparent}
+  .ledger tr.total-row{border:2px solid var(--brass-soft);background:var(--card)}
+  .ledger tr.total-row td,.ledger tr.total-row:hover td{background:transparent;padding-top:4px}
+  .ledger tr.total-row td.bal{border-top:1px solid var(--line)}
 }
 :focus-visible{outline:2.5px solid var(--brass);outline-offset:2px;border-radius:4px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

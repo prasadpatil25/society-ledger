@@ -132,16 +132,16 @@ export function renderLedger(data, opts = {}){
     const cr = r.type==="credit"?r.amount:0, db = r.type==="debit"?r.amount:0;
     const tag = r.category ? esc(r.category) : (r.mode?esc(r.mode):"");
     const tagHtml = tag ? `<div class="tag">${tag}${r.member?` · ${esc(r.member)}`:""}</div>` : (r.member?`<div class="tag">${esc(r.member)}</div>`:"");
-    const act = editable ? `<td class="r col-edit"><span class="rowact">
+    const act = editable ? `<td class="r col-edit" data-label=""><span class="rowact">
         <button class="btn btn-sm" data-edit="${r.id}">Edit</button>
         <button class="btn btn-sm btn-danger" data-del="${r.id}">Delete</button></span></td>` : "";
     return `<tr class="${bandCls.trim()}">
-      <td class="folio">${String(r.seq).padStart(2,'0')}</td>
-      <td class="date">${fmtDate(r.date)}</td>
-      <td>${esc(r.particulars)}${tagHtml}</td>
-      <td class="r num ${cr?'cr':''}">${cr?fmt(cr):'—'}</td>
-      <td class="r num ${db?'db':''}">${db?fmt(db):'—'}</td>
-      <td class="r num bal">${fmt(r.bal)}</td>${act}</tr>`;
+      <td class="folio" data-label="#">${String(r.seq).padStart(2,'0')}</td>
+      <td class="date" data-label="Date">${fmtDate(r.date)}</td>
+      <td class="particulars" data-label="Particulars">${esc(r.particulars)}${tagHtml}</td>
+      <td class="r num ${cr?'cr':'nil'}" data-label="In">${cr?fmt(cr):'—'}</td>
+      <td class="r num ${db?'db':'nil'}" data-label="Out">${db?fmt(db):'—'}</td>
+      <td class="r num bal" data-label="Balance">${fmt(r.bal)}</td>${act}</tr>`;
   }).join("");
 
   if (shown.length) {
@@ -150,13 +150,13 @@ export function renderLedger(data, opts = {}){
     const label = filter==="credit" ? `Total money in · ${shown.length}`
                 : filter==="debit"  ? `Total money out · ${shown.length}`
                 : `Total · ${shown.length} entries`;
-    const actCell = editable ? '<td class="col-edit"></td>' : "";
+    const actCell = editable ? '<td class="col-edit nil"></td>' : "";
     rowsHtml += `<tr class="total-row">
-      <td></td><td></td>
-      <td>${label}</td>
-      <td class="r num cr">${shownIn?fmt(shownIn):'—'}</td>
-      <td class="r num db">${shownOut?fmt(shownOut):'—'}</td>
-      <td class="r num bal">${fmt(v.closing)}</td>${actCell}</tr>`;
+      <td class="nil"></td><td class="nil"></td>
+      <td class="particulars" data-label="">${label}</td>
+      <td class="r num cr" data-label="Total in">${shownIn?fmt(shownIn):'—'}</td>
+      <td class="r num db" data-label="Total out">${shownOut?fmt(shownOut):'—'}</td>
+      <td class="r num bal" data-label="Balance">${fmt(v.closing)}</td>${actCell}</tr>`;
   }
   $("rows").innerHTML = rowsHtml;
 

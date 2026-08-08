@@ -424,11 +424,11 @@ async function loadRoster(){
   $("rosterMeta").textContent = `${roster.length} member${roster.length===1?"":"s"}${roster.length?` · ${active} active`:""}`;
   $("memberEmpty").hidden = roster.length > 0;
   $("memberRows").innerHTML = roster.map(m => `<tr>
-    <td class="folio">${m.flat?esc(m.flat):"—"}</td>
-    <td>${esc(m.name)}</td>
-    <td class="date">${m.contact?esc(m.contact):"—"}</td>
-    <td>${m.active!==0?'<span class="status" style="color:var(--credit);font-weight:600">Active</span>':'<span class="status" style="color:var(--ink-faint)">Inactive</span>'}</td>
-    <td class="r"><span class="rowact">
+    <td class="folio" data-label="Flat">${m.flat?esc(m.flat):"—"}</td>
+    <td class="particulars" data-label="Name">${esc(m.name)}</td>
+    <td class="date" data-label="Contact">${m.contact?esc(m.contact):"—"}</td>
+    <td data-label="Status">${m.active!==0?'<span class="status" style="color:var(--credit);font-weight:600">Active</span>':'<span class="status" style="color:var(--ink-faint)">Inactive</span>'}</td>
+    <td class="r" data-label=""><span class="rowact">
       <button class="btn btn-sm" data-medit="${m.id}">Edit</button>
       <button class="btn btn-sm btn-danger" data-mdel="${m.id}">Delete</button></span></td></tr>`).join("");
 }
@@ -505,11 +505,11 @@ async function loadTemplates(){
   $("tplMeta").textContent = `${templates.length} template${templates.length===1?"":"s"}`;
   $("tplEmpty").hidden = templates.length > 0;
   $("tplRows").innerHTML = templates.map(t => `<tr>
-    <td>${esc(t.label)}${t.monthly?' <span class="tag">monthly</span>':''}</td>
-    <td>${esc(t.particulars)}${t.category?`<div class="tag">${esc(t.category)}</div>`:""}</td>
-    <td class="${t.type==='credit'?'cr':'db'}">${t.type==='credit'?'In':'Out'}</td>
-    <td class="r num">${(t.amount!=null&&t.amount!=="")?fmt(t.amount):"—"}</td>
-    <td class="r"><span class="rowact">
+    <td class="particulars" data-label="Label">${esc(t.label)}${t.monthly?' <span class="tag">monthly</span>':''}</td>
+    <td data-label="Particulars">${esc(t.particulars)}${t.category?`<div class="tag">${esc(t.category)}</div>`:""}</td>
+    <td data-label="Type" class="${t.type==='credit'?'cr':'db'}">${t.type==='credit'?'In':'Out'}</td>
+    <td class="r num" data-label="Default">${(t.amount!=null&&t.amount!=="")?fmt(t.amount):"—"}</td>
+    <td class="r" data-label=""><span class="rowact">
       <button class="btn btn-sm" data-tedit="${t.id}">Edit</button>
       <button class="btn btn-sm btn-danger" data-tdel="${t.id}">Delete</button></span></td></tr>`).join("");
   renderQuickAdd();
